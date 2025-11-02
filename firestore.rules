@@ -1,147 +1,67 @@
-/**
- * @file Firestore Security Rules for CampusConnect Application
- * @description This ruleset enforces a role-based access control model with admins and teachers, and path-based ownership for student data.
- *
- * Core Philosophy:
- *  - Strict role-based access control for administrative and teacher functions.
- *  - Path-based ownership for student data, nested under classes and sections.
- *  - No open write rules are allowed. All writes must be authorized.
- *
- * Data Structure:
- *  - /classes/{classId}: Stores class information. Only admins can manage classes.
- *  - /classes/{classId}/sections/{sectionId}: Stores section information within a class. Only admins can manage sections.
- *  - /classes/{classId}/sections/{sectionId}/students/{studentId}: Stores student data. Admins and teachers of the class/section can manage students.
- *  - /admins/{adminId}: Stores admin user information. Existence grants admin privileges.
- *  - /teachers/{teacherId}: Stores teacher user information. Existence grants teacher privileges.
- *
- * Key Security Decisions:
- *  - Admin privileges are granted by the existence of a document in the `/admins/{adminId}` collection.
- *  - Teacher privileges are granted by the existence of a document in the `/teachers/{teacherId}` collection.
- *  - Listing of admins and teachers is explicitly denied.
- *  - Write access to Classes and Sections is restricted to admins.
- *  - Students can only be managed by admins and teachers assigned to the class/section.
- *
- * Denormalization for Authorization:
- *  - Teacher documents include denormalized lists of class and section IDs to simplify authorization checks for student data.
- *
- * Structural Segregation:
- *  - Admin and teacher roles are managed through dedicated collections (`/admins`, `/teachers`) to avoid mixing role data with other user information.
- */
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Manages class information. Only admins can create/update/delete classes.
-     * @path /classes/{classId}
-     * @allow (create, update, delete) if isAdmin()
-     * @deny (create, update, delete) if !isAdmin()
-     * @allow get, list: if true; // Public read access for classes
-     * @principle Enforces admin-only access for managing classes.
-     */
-    match /classes/{classId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    /**
-     * @description Manages section information within a class. Only admins can create/update/delete sections within a class.
-     * @path /classes/{classId}/sections/{sectionId}
-     * @allow (create, update, delete) if isAdmin()
-     * @deny (create, update, delete) if !isAdmin()
-     * @allow get, list: if true; // Public read access for sections
-     * @principle Enforces admin-only access for managing sections.
-     */
-    match /classes/{classId}/sections/{sectionId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Manages student information within a class and section. Only admins and teachers assigned to the class/section can create/update student data.
-     * @path /classes/{classId}/sections/{sectionId}/students/{studentId}
-     * @allow create: if isAdmin() || isTeacherForClassAndSection(classId, sectionId);
-     * @allow update, delete: if isAdmin() || isTeacherForClassAndSection(classId, sectionId);
-     * @deny create: if !isAdmin() && !isTeacherForClassAndSection(classId, sectionId);
-     * @deny update, delete: if !isAdmin() && !isTeacherForClassAndSection(classId, sectionId);
-     * @allow get, list: if isAdmin() || isTeacherForClassAndSection(classId, sectionId);
-     * @principle Enforces admin and teacher access control for managing students.
-     */
-    match /classes/{classId}/sections/{sectionId}/students/{studentId} {
-      allow get, list: if isAdmin() || isTeacherForClassAndSection(classId, sectionId);
-      allow create: if isAdmin() || isTeacherForClassAndSection(classId, sectionId);
-      allow update, delete: if isAdmin() || isTeacherForClassAndSection(classId, sectionId);
-    }
-
-    /**
-     * @description Stores administrator user information. The existence of a document in this collection grants admin privileges.
-     * @path /admins/{adminId}
-     * @allow get: if isAdmin();
-     * @deny list: if true;
-     * @allow create: if request.auth.uid == adminId;
-     * @allow update, delete: if isAdmin();
-     * @principle Enforces admin-only access for managing admin accounts.
-     */
-    match /admins/{adminId} {
-      allow get: if isAdmin();
-      allow list: if false;
-      allow create: if request.auth.uid == adminId;
-      allow update, delete: if isAdmin();
-    }
-
-    /**
-     * @description Stores teacher user information. The existence of a document in this collection grants teacher privileges. Includes denormalized class and section ids for easier querying.
-     * @path /teachers/{teacherId}
-     * @allow get: if isTeacher(teacherId) || isAdmin();
-     * @deny list: if true;
-     * @allow create: if request.auth.uid == teacherId;
-     * @allow update, delete: if isAdmin();
-     * @principle Enforces admin-only access for managing teacher accounts. Teachers can only read their own record.
-     */
-    match /teachers/{teacherId} {
-      allow get: if isTeacher(teacherId) || isAdmin();
-      allow list: if false;
-      allow create: if request.auth.uid == teacherId;
-      allow update, delete: if isAdmin();
-    }
-
-    //---------------- Helper functions -------------------
-
-    /**
-     * @description Checks if the user is signed in.
-     * @return {bool} True if the user is signed in, false otherwise.
-     */
-    // function isSignedIn() {
-    //   return request.auth != null;
-    // }
-
-    /**
-     * @description Checks if the user is an administrator.
-     * @return {bool} True if the user has an admin document, false otherwise.
-     */
+    // Admins have a document in the /admins collection with their UID.
     function isAdmin() {
-      return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Teachers have a document in the /teachers collection with their UID.
+    function isTeacher() {
+      return isSignedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+    }
+    
+    // A teacher assigned to the specific class and section.
+    function isTeacherForClass(classId) {
+      return isTeacher() && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.classIds.hasAny([classId]);
+    }
+    
+    function isTeacherForSection(sectionId) {
+        return isTeacher() && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.sectionIds.hasAny([sectionId]);
     }
 
-    /**
-     * @description Checks if the user is a teacher.
-     * @param {string} teacherId The ID of the teacher to check.
-     * @return {bool} True if the user has a teacher document, false otherwise.
-     */
-    function isTeacher(teacherId) {
-      return request.auth != null && exists(/databases/$(database)/documents/teachers/$(teacherId));
+    // Unauthenticated users can query for users to verify credentials before login.
+    match /{path=**}/students/{studentId} {
+        allow read: if true;
+        allow write: if isAdmin() || isTeacherForClass(path[1]) && isTeacherForSection(path[3]);
+    }
+    
+    match /classes/{classId} {
+      allow read: if true; // All users can read class info
+      allow write: if isAdmin();
+      
+      match /sections/{sectionId} {
+        allow read: if true; // All users can read section info
+        allow write: if isAdmin();
+
+        // Students can be read by admins or teachers of that class.
+        // Students can only be written by admins or assigned teachers.
+        match /students/{studentId} {
+            allow read: if isAdmin() || isTeacherForClass(classId);
+            allow write: if isAdmin() || isTeacherForClass(classId) && isTeacherForSection(sectionId);
+        }
+      }
     }
 
-    /**
-     * @description Checks if the user is a teacher for a specific class and section.
-     * @param {string} classId The ID of the class to check.
-     * @param {string} sectionId The ID of the section to check.
-     * @return {bool} True if the user is a teacher for the class and section, false otherwise.
-     */
-    function isTeacherForClassAndSection(classId, sectionId) {
-        return request.auth != null && exists(/databases/$(database)/documents/teachers/$(request.auth.uid))
-        && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.classIds is list && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.classIds.hasAny([classId])
-        && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.sectionIds is list && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.sectionIds.hasAny([sectionId]);
+    // Admins can manage other admins and teachers.
+    match /admins/{userId} {
+      allow read, write: if isAdmin();
+    }
+    
+    match /teachers/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+      allow write: if isAdmin();
     }
   }
 }

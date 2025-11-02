@@ -1,95 +1,61 @@
 {
   "entities": {
     "Student": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Student",
-      "type": "object",
       "description": "Represents a student in the CampusConnect application.",
+      "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Student entity."
-        },
         "name": {
           "type": "string",
           "description": "The student's full name."
-        },
-        "classId": {
-          "type": "string",
-          "description": "Reference to Class. (Relationship: Class 1:N Student)"
-        },
-        "sectionId": {
-          "type": "string",
-          "description": "Reference to Section. (Relationship: Section 1:N Student)"
         },
         "email": {
           "type": "string",
           "description": "The student's email address.",
           "format": "email"
+        },
+        "password": {
+          "type": "string",
+          "description": "The student's password (hashed or otherwise secured)."
         }
       },
       "required": [
-        "id",
-        "name",
-        "classId",
-        "sectionId"
+        "name"
       ]
     },
     "Class": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Class",
-      "type": "object",
       "description": "Represents a class (e.g., Grade 10) in the school.",
+      "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Class entity."
-        },
         "name": {
           "type": "string",
           "description": "The name of the class (e.g., 'Grade 10')."
         }
       },
       "required": [
-        "id",
         "name"
       ]
     },
     "Section": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Section",
-      "type": "object",
       "description": "Represents a section within a class (e.g., A, B, C).",
+      "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Section entity."
-        },
         "name": {
           "type": "string",
           "description": "The name of the section (e.g., 'A')."
-        },
-        "classId": {
-          "type": "string",
-          "description": "Reference to Class. (Relationship: Class 1:N Section)"
         }
       },
       "required": [
-        "id",
-        "name",
-        "classId"
+        "name"
       ]
     },
     "Admin": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Admin",
-      "type": "object",
       "description": "Represents an administrator user in the application.",
+      "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Admin entity."
-        },
         "name": {
           "type": "string",
           "description": "The admin's full name."
@@ -98,24 +64,22 @@
           "type": "string",
           "description": "The admin's email address.",
           "format": "email"
+        },
+        "password": {
+          "type": "string",
+          "description": "The admin's password."
         }
       },
       "required": [
-        "id",
         "name",
         "email"
       ]
     },
     "Teacher": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Teacher",
-      "type": "object",
       "description": "Represents a teacher user in the application.",
+      "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Teacher entity."
-        },
         "name": {
           "type": "string",
           "description": "The teacher's full name."
@@ -125,23 +89,26 @@
           "description": "The teacher's email address.",
           "format": "email"
         },
+        "password": {
+          "type": "string",
+          "description": "The teacher's password."
+        },
         "classIds": {
           "type": "array",
-          "description": "References to Classes. (Relationship: Teacher 1:N Class)",
+          "description": "References to Classes taught by the teacher.",
           "items": {
             "type": "string"
           }
         },
         "sectionIds": {
           "type": "array",
-          "description": "References to Sections. (Relationship: Teacher 1:N Section)",
+          "description": "References to Sections taught by the teacher.",
           "items": {
             "type": "string"
           }
         }
       },
       "required": [
-        "id",
         "name",
         "email"
       ]
@@ -149,105 +116,114 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/classes/{classId}",
-        "definition": {
-          "entityName": "Class",
-          "schema": {
-            "$ref": "#/backend/entities/Class"
-          },
-          "description": "Stores class information.  Authorization: Only admins can create/update/delete classes.",
-          "params": [
-            {
-              "name": "classId",
-              "description": "The unique identifier for the class."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/classes/{classId}/sections/{sectionId}",
-        "definition": {
-          "entityName": "Section",
-          "schema": {
-            "$ref": "#/backend/entities/Section"
-          },
-          "description": "Stores section information within a class. Authorization: Only admins can create/update/delete sections within a class.",
-          "params": [
-            {
-              "name": "classId",
-              "description": "The unique identifier for the class."
+    "collections": {
+      "classes": {
+        "schema": {
+          "$ref": "#/entities/Class"
+        },
+        "description": "Top-level collection for all classes in the school.",
+        "collections": {
+          "sections": {
+            "schema": {
+              "$ref": "#/entities/Section"
             },
-            {
-              "name": "sectionId",
-              "description": "The unique identifier for the section."
+            "description": "Sub-collection for sections within a class.",
+            "collections": {
+              "students": {
+                "schema": {
+                  "$ref": "#/entities/Student"
+                },
+                "description": "Sub-collection for students within a specific class and section."
+              }
             }
-          ]
+          }
         }
       },
+      "admins": {
+        "schema": {
+          "$ref": "#/entities/Admin"
+        },
+        "description": "Collection for administrator accounts."
+      },
+      "teachers": {
+        "schema": {
+          "$ref": "#/entities/Teacher"
+        },
+        "description": "Collection for teacher accounts."
+      }
+    },
+    "initialData": [
       {
-        "path": "/classes/{classId}/sections/{sectionId}/students/{studentId}",
-        "definition": {
-          "entityName": "Student",
-          "schema": {
-            "$ref": "#/backend/entities/Student"
-          },
-          "description": "Stores student information within a class and section. Authorization: Only admins and teachers assigned to the class/section can create/update student data.",
-          "params": [
-            {
-              "name": "classId",
-              "description": "The unique identifier for the class."
+        "collection": "classes",
+        "documentId": "10",
+        "data": {
+          "name": "Grade 10"
+        },
+        "subcollections": [
+          {
+            "collection": "sections",
+            "documentId": "A",
+            "data": {
+              "name": "A"
             },
-            {
-              "name": "sectionId",
-              "description": "The unique identifier for the section."
+            "subcollections": [
+              {
+                "collection": "students",
+                "documents": [
+                  {
+                    "documentId": "student1",
+                    "data": { "name": "Alex Johnson" }
+                  },
+                  {
+                    "documentId": "student2",
+                    "data": { "name": "Maria Garcia" }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "collection": "sections",
+            "documentId": "B",
+            "data": {
+              "name": "B"
             },
-            {
-              "name": "studentId",
-              "description": "The unique identifier for the student."
-            }
-          ]
+            "subcollections": [
+              {
+                "collection": "students",
+                "documents": [
+                  {
+                    "documentId": "student3",
+                    "data": { "name": "James Smith" }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "collection": "admins",
+        "documentId": "admin1",
+        "data": {
+          "name": "Dr. Evelyn Reed",
+          "email": "admin@campus.com"
         }
       },
       {
-        "path": "/admins/{adminId}",
-        "definition": {
-          "entityName": "Admin",
-          "schema": {
-            "$ref": "#/backend/entities/Admin"
-          },
-          "description": "Stores administrator user information. The existence of a document in this collection grants admin privileges.",
-          "params": [
-            {
-              "name": "adminId",
-              "description": "The unique identifier for the administrator."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/teachers/{teacherId}",
-        "definition": {
-          "entityName": "Teacher",
-          "schema": {
-            "$ref": "#/backend/entities/Teacher"
-          },
-          "description": "Stores teacher user information. The existence of a document in this collection grants teacher privileges. Includes denormalized class and section ids for easier querying.",
-          "params": [
-            {
-              "name": "teacherId",
-              "description": "The unique identifier for the teacher."
-            }
-          ]
+        "collection": "teachers",
+        "documentId": "teacher1",
+        "data": {
+          "name": "Mr. Davison",
+          "email": "teacher.davison@campus.com",
+          "classIds": ["10"],
+          "sectionIds": ["A", "B"]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to manage student, class, section, admin, and teacher data for the CampusConnect application. It prioritizes authorization independence and follows a path-based ownership model where possible. The key collections are `students`, `classes`, `sections`, `admins`, and `teachers`. \n\n**Authorization Independence:**\n\n*   The database uses path-based ownership for `students`, with paths like `/classes/{classId}/sections/{sectionId}/students/{studentId}`.  Each student document inherently belongs to a class and section, so authorization rules can directly check the existence of the class and section without needing `get()` calls to parent documents.\n\n**QAPs (Rules are not Filters):**\n\n*   The structure segregates different types of data into separate collections (e.g., `admins`, `teachers`, `students`, `classes`, `sections`). This allows for simple security rules based on the path.\n*   For role management, instead of custom claims, the existence of a document in the `/admins/{adminId}` or `/teachers/{teacherId}` collection grants admin or teacher access respectively.\n\nThis structure enables secure `list` operations because rules are applied to entire collections or subcollections, not based on data within the documents.  For example, listing all students in a section is secured by the rule on `/classes/{classId}/sections/{sectionId}/students`, not by filtering student documents based on their section.\n\n**Invariants:**\n\n*   Ownership of Student data is inherent in the path.\n*   Timestamps can be added as needed to each entity without impacting security rules.\n*   Denormalized data (e.g., copying Class and Section names into Student documents) can be managed without complex rules."
+    ]
   }
 }
