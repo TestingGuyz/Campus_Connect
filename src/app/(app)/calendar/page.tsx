@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -136,12 +136,16 @@ function AddEventModal({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (ope
 
 
 export default function CalendarPage() {
-  const { user } = useAuth();
+  const { user: authUser } = useAuth();
   const firestore = useFirestore();
+  const { user } = useUser();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const eventsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'events') : null, [firestore]);
+  const eventsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'events');
+  }, [firestore, user]);
   const { data: events, isLoading } = useCollection<SchoolEvent>(eventsQuery);
 
   const sortedEvents = events?.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -154,7 +158,7 @@ export default function CalendarPage() {
           <h1 className="text-2xl font-headline font-bold">Calendar</h1>
           <p className="text-muted-foreground">View and manage school events and schedules.</p>
         </div>
-        {user?.role === 'admin' && (
+        {authUser?.role === 'admin' && (
           <>
             <Button className="mt-4 sm:mt-0" onClick={() => setIsModalOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" />
