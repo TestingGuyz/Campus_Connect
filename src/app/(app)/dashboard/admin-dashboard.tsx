@@ -70,12 +70,12 @@ const getPriorityBadge = (priority: string) => {
 
 export default function AdminDashboard() {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
   const eventsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || isUserLoading || !user) return null;
     return collection(firestore, 'events');
-  }, [firestore, user]);
+  }, [firestore, user, isUserLoading]);
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
 
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
@@ -179,7 +179,7 @@ export default function AdminDashboard() {
                 <CardDescription>Urgent upcoming events and deadlines.</CardDescription>
             </CardHeader>
             <CardContent>
-                {isLoadingEvents ? <p>Loading events...</p> : (
+                {isLoadingEvents || isUserLoading ? <p>Loading events...</p> : (
                     <ul className="space-y-3">
                         {highPriorityEvents.map(event => (
                             <li key={event.id} className="flex items-center justify-between text-sm">

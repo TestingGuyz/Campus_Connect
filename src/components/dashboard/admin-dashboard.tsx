@@ -22,6 +22,7 @@ import type { ChartConfig } from '@/components/ui/chart';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/use-auth';
 
 const chartData = [
   { month: "January", attendance: 186, assignments: 80 },
@@ -70,8 +71,12 @@ const getPriorityBadge = (priority: string) => {
 
 export default function AdminDashboard() {
   const firestore = useFirestore();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
-  const eventsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'events') : null, [firestore]);
+  const eventsQuery = useMemoFirebase(() => {
+    if (!firestore || isAuthLoading || !user) return null;
+    return collection(firestore, 'events');
+  }, [firestore, user, isAuthLoading]);
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
 
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
@@ -175,7 +180,7 @@ export default function AdminDashboard() {
                 <CardDescription>Urgent upcoming events and deadlines.</CardDescription>
             </CardHeader>
             <CardContent>
-                {isLoadingEvents ? <p>Loading events...</p> : (
+                {isLoadingEvents || isAuthLoading ? <p>Loading events...</p> : (
                     <ul className="space-y-3">
                         {highPriorityEvents.map(event => (
                             <li key={event.id} className="flex items-center justify-between text-sm">
