@@ -19,14 +19,12 @@ import { getDocs, query, collection, where, limit, doc, updateDoc } from 'fireba
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, isLoading: isAuthLoading } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('student');
   const [email, setEmail] = useState('');
@@ -39,11 +37,11 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     setError('');
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     if (!firestore) {
       setError('Database connection is not available.');
-      setIsLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
@@ -54,7 +52,7 @@ export default function LoginPage() {
       if (role === 'student') {
         if(!name || !className || !section) {
             setError('Please fill in all fields for student login.');
-            setIsLoading(false);
+            setIsSubmitting(false);
             return;
         }
         const studentsCollection = collection(firestore, `classes/${className}/sections/${section}/students`);
@@ -62,14 +60,14 @@ export default function LoginPage() {
       } else if (role === 'teacher') {
          if(!name || !email) {
             setError('Please fill in all fields for teacher login.');
-            setIsLoading(false);
+            setIsSubmitting(false);
             return;
         }
         userQuery = query(collection(firestore, "teachers"), where("name", "==", name), where("email", "==", email), limit(1));
       } else { // admin
          if(!name || !email) {
             setError('Please fill in all fields for admin login.');
-            setIsLoading(false);
+            setIsSubmitting(false);
             return;
         }
         userQuery = query(collection(firestore, "admins"), where("name", "==", name), where("email", "==", email), limit(1));
@@ -79,7 +77,7 @@ export default function LoginPage() {
 
       if (querySnapshot.empty) {
         setError("Invalid credentials or user not found.");
-        setIsLoading(false);
+        setIsSubmitting(false);
         return;
       }
 
@@ -87,7 +85,6 @@ export default function LoginPage() {
       const userData = foundUser.data();
       const userId = foundUser.id;
       
-      // Associate email and password if not already present
       if (!userData.email || !userData.password) {
         let userDocRef;
         if (role === 'student') {
@@ -101,7 +98,7 @@ export default function LoginPage() {
       } else {
         if(userData.email !== email || userData.password !== password) {
             setError("Invalid email or password.");
-            setIsLoading(false);
+            setIsSubmitting(false);
             return;
         }
       }
@@ -125,17 +122,19 @@ export default function LoginPage() {
         description: "Could not connect to the database or an unexpected error occurred."
       })
     } finally {
-        setIsLoading(false);
+        setIsSubmitting(false);
     }
   };
 
-  const handleQuickLogin = (role: 'admin' | 'student') => {
+  const handleQuickLogin = (roleToLogin: 'admin' | 'student') => {
      const mockUsers = {
       'admin': { id: 'admin1', name: 'Dr. Evelyn Reed', email: 'admin@campus.com', role: 'admin' as const },
       'student': { id: 'student1', name: 'Alex Johnson', email: 'student@campus.com', role: 'student' as const, className: '10', sectionName: 'A' },
     };
-    login(mockUsers[role]);
+    login(mockUsers[roleToLogin]);
   };
+
+  const isLoading = isAuthLoading || isSubmitting;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -229,11 +228,11 @@ export default function LoginPage() {
               Or quick login as...
           </div>
           <div className="flex w-full gap-2">
-            <Button variant="secondary" className="w-full" onClick={() => handleQuickLogin('student')}>
-              Student (Demo)
+            <Button variant="secondary" className="w-full" onClick={() => handleQuickLogin('student')} disabled={isLoading}>
+              {isLoading ? <Loader2 className="animate-spin" /> : 'Student (Demo)'}
             </Button>
-            <Button variant="outline" className="w-full" onClick={() => handleQuickLogin('admin')}>
-              Admin (Demo)
+            <Button variant="outline" className="w-full" onClick={() => handleQuickLogin('admin')} disabled={isLoading}>
+              {isLoading ? <Loader2 className="animate-spin" /> : 'Admin (Demo)'}
             </Button>
           </div>
         </CardFooter>
