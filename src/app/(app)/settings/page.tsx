@@ -6,6 +6,73 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { useState } from 'react';
+import { useFirestore } from '@/firebase';
+import { addDoc, collection } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+
+function AdminSettings() {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [name, setName] = useState('');
+    const [classId, setClassId] = useState('');
+    const [sectionId, setSectionId] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleAddStudent = async () => {
+        if (!firestore || !name || !classId || !sectionId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields.' });
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const studentCollectionRef = collection(firestore, `classes/${classId}/sections/${sectionId}/students`);
+            await addDoc(studentCollectionRef, { name });
+            toast({ title: 'Success', description: `Student ${name} added to class ${classId}-${sectionId}.` });
+            setName('');
+            setClassId('');
+            setSectionId('');
+        } catch (error) {
+            console.error('Error adding student:', error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not add student.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Admin Controls</CardTitle>
+                <CardDescription>Manage students, classes, and sections.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className='space-y-2'>
+                    <h3 className='font-medium'>Add New Student</h3>
+                    <div className="space-y-2">
+                        <Label htmlFor="student-name">Student Full Name</Label>
+                        <Input id="student-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Jane Doe" />
+                    </div>
+                    <div className='grid grid-cols-2 gap-4'>
+                        <div className="space-y-2">
+                            <Label htmlFor="student-class">Class</Label>
+                            <Input id="student-class" value={classId} onChange={(e) => setClassId(e.target.value)} placeholder="e.g., 10" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="student-section">Section</Label>
+                            <Input id="student-section" value={sectionId} onChange={(e) => setSectionId(e.target.value)} placeholder="e.g., B" />
+                        </div>
+                    </div>
+                    <Button onClick={handleAddStudent} disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Add Student
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -16,6 +83,8 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-headline font-bold">Settings</h1>
         <p className="text-muted-foreground">Manage your account and application settings.</p>
       </div>
+
+      {user?.role === 'admin' && <AdminSettings />}
 
       <Card>
         <CardHeader>

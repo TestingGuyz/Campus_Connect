@@ -139,9 +139,10 @@
         "fileUrl": { "type": "string" },
         "fileName": { "type": "string" },
         "classId": { "type": "string" },
-        "sectionId": { "type": "string" }
+        "sectionId": { "type": "string" },
+        "createdAt": { "type": "object"}
       },
-      "required": ["title", "subject", "dueDate", "classId", "sectionId"]
+      "required": ["title", "subject", "dueDate", "classId", "sectionId", "createdAt"]
     },
     "StudentAssignment": {
       "title": "Student Assignment",
@@ -151,8 +152,7 @@
         "assignmentId": { "type": "string" },
         "studentId": { "type": "string" },
         "status": { "type": "string", "enum": ["Not Started", "In Progress", "Completed"] },
-        "priority": { "type": "string", "enum": ["Low", "Medium", "High"] },
-        "submissionUrl": { "type": "string" }
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High"] }
       },
       "required": ["assignmentId", "studentId", "status", "priority"]
     },
@@ -168,6 +168,19 @@
         "timestamp": { "type": "object" }
       },
       "required": ["authorName", "authorId", "message", "timestamp"]
+    },
+    "Event": {
+        "title": "Event",
+        "description": "Represents a calendar event.",
+        "type": "object",
+        "properties": {
+            "title": { "type": "string" },
+            "date": { "type": "string", "format": "date" },
+            "type": { "type": "string", "enum": ["meeting", "event", "academic", "holiday", "other"] },
+            "priority": { "type": "string", "enum": ["High", "Medium", "Low"] },
+            "createdAt": { "type": "object"}
+        },
+        "required": ["title", "date", "type", "priority", "createdAt"]
     }
   },
   "auth": {
@@ -200,12 +213,6 @@
                   "$ref": "#/entities/Timetable"
                 },
                 "description": "Sub-collection for the weekly timetable of a section."
-              },
-              "assignments": {
-                "schema": {
-                  "$ref": "#/entities/Assignment"
-                },
-                "description": "Assignments for a specific class and section."
               }
             }
           }
@@ -223,6 +230,12 @@
         },
         "description": "Collection for teacher accounts."
       },
+       "assignments": {
+        "schema": {
+          "$ref": "#/entities/Assignment"
+        },
+        "description": "All assignments for all classes."
+      },
       "student-assignments": {
         "schema": {
           "$ref": "#/entities/StudentAssignment"
@@ -230,8 +243,20 @@
         "description": "Tracks assignment status for each student."
       },
       "groups": {
-        "schema": { "$ref": "#/entities/ChatMessage" },
-        "description": "Collection for group chat messages. Sub-collections are group names."
+          "schema": { "$ref": "#/entities/ChatMessage" },
+          "description": "Collection for group chat messages. Sub-collections are group IDs (e.g., 'teachers', 'parents').",
+          "collections": {
+              "messages": {
+                  "schema": { "$ref": "#/entities/ChatMessage" },
+                  "description": "Messages within a specific group chat."
+              }
+          }
+      },
+      "events": {
+        "schema": {
+            "$ref": "#/entities/Event"
+        },
+        "description": "All calendar events for the school."
       }
     },
     "initialData": [
@@ -302,4 +327,3 @@
     ]
   }
 }
-    

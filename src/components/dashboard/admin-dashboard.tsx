@@ -1,7 +1,7 @@
 'use client'
 
-import { Activity, BookOpen, Check, DollarSign, Users } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Activity, BookOpen, Check, Users, CalendarCheck } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -19,6 +19,9 @@ import {
 } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import type { ChartConfig } from '@/components/ui/chart';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { Badge } from '@/components/ui/badge';
 
 const chartData = [
   { month: "January", attendance: 186, assignments: 80 },
@@ -48,9 +51,35 @@ const recentActivities = [
     { student: 'Ava Jones', activity: 'Submitted "Art Project"', time: '3h ago' },
 ]
 
+type SchoolEvent = {
+  id: string;
+  date: string;
+  title: string;
+  type: 'meeting' | 'event' | 'academic' | 'holiday' | 'other';
+  priority: 'High' | 'Medium' | 'Low';
+};
+
+const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'High': return 'destructive';
+      case 'Medium': return 'secondary';
+      case 'Low': return 'outline';
+      default: return 'outline';
+    }
+}
+
 export default function AdminDashboard() {
+  const firestore = useFirestore();
+
+  const eventsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'events') : null, [firestore]);
+  const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
+
+  const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
+                                   .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                                   .slice(0, 5) || [];
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-headline font-bold">Admin Dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -89,9 +118,9 @@ export default function AdminDashboard() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+12</div>
+            <div className="text-2xl font-bold">+{events?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              in the next 7 days
+              in total
             </p>
           </CardContent>
         </Card>
@@ -111,7 +140,7 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Overview</CardTitle>
@@ -139,28 +168,52 @@ export default function AdminDashboard() {
             </ChartContainer>
           </CardContent>
         </Card>
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-                <TableBody>
-                    {recentActivities.map((activity, index) => (
-                        <TableRow key={index}>
-                            <TableCell>
-                                <div className="font-medium">{activity.student}</div>
-                                <div className="hidden text-sm text-muted-foreground md:inline">
-                                    {activity.activity}
+        <div className="lg:col-span-3 grid gap-6">
+            <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><CalendarCheck className="text-destructive"/> High-Priority Events</CardTitle>
+                <CardDescription>Urgent upcoming events and deadlines.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoadingEvents ? <p>Loading events...</p> : (
+                    <ul className="space-y-3">
+                        {highPriorityEvents.map(event => (
+                            <li key={event.id} className="flex items-center justify-between text-sm">
+                                <div>
+                                    <p className="font-medium">{event.title}</p>
+                                    <p className="text-xs text-muted-foreground">{new Date(event.date + 'T00:00:00').toLocaleDateString()}</p>
                                 </div>
-                            </TableCell>
-                            <TableCell className="text-right">{activity.time}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                                <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
+                            </li>
+                        ))}
+                         {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events found.</p>}
+                    </ul>
+                )}
+            </CardContent>
+            </Card>
+            <Card>
+            <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableBody>
+                        {recentActivities.map((activity, index) => (
+                            <TableRow key={index}>
+                                <TableCell>
+                                    <div className="font-medium">{activity.student}</div>
+                                    <div className="hidden text-sm text-muted-foreground md:inline">
+                                        {activity.activity}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right">{activity.time}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+            </Card>
+        </div>
       </div>
     </div>
   );

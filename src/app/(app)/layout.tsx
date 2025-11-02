@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Book,
   Calendar,
@@ -43,22 +43,41 @@ const navItems: NavItem[] = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
   const filteredNavItems = user ? navItems.filter(item => item.roles.includes(user.role)) : [];
   
+  const handleLinkClick = (href: string) => {
+    router.push(href);
+    setMobileNavOpen(false);
+  }
+
   const NavLinks = ({isMobile = false}: {isMobile?: boolean}) => (
     <nav className={`grid items-start px-2 text-sm font-medium ${isMobile ? 'gap-2' : 'lg:px-4 gap-1'}`}>
       {filteredNavItems.map(({ href, label, icon: Icon }) => (
-        <Link
-          key={href}
-          href={href}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary ${
-            pathname.startsWith(href) ? 'bg-muted text-primary' : 'text-muted-foreground'
-          }`}
-        >
-          <Icon className="h-4 w-4" />
-          {label}
-        </Link>
+        isMobile ? (
+          <Button
+            key={href}
+            variant={pathname.startsWith(href) ? 'secondary' : 'ghost'}
+            className="justify-start gap-3 px-3 py-2"
+            onClick={() => handleLinkClick(href)}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </Button>
+        ) : (
+          <Link
+            key={href}
+            href={href}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary ${
+              pathname.startsWith(href) ? 'bg-muted text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </Link>
+        )
       ))}
     </nav>
   );
@@ -80,7 +99,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          <Sheet>
+          <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="shrink-0 md:hidden">
                 <Menu className="h-5 w-5" />
