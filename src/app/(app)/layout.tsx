@@ -20,8 +20,6 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
-import { Progress } from '@/components/ui/progress';
-import Image from 'next/image';
 
 interface NavItem {
   href: string;
@@ -42,42 +40,8 @@ const navItems: NavItem[] = [
   { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'student', 'teacher'] },
 ];
 
-function LoadingScreen() {
-    const [progress, setProgress] = React.useState(0);
-
-    React.useEffect(() => {
-        const timer = setInterval(() => {
-            setProgress((prev) => {
-                if (prev >= 95) {
-                    clearInterval(timer);
-                    return 95;
-                }
-                return prev + Math.random() * 10;
-            });
-        }, 300);
-
-        return () => clearInterval(timer);
-    }, []);
-
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-          <Image 
-              src="https://www.mpbfoundationhsschool.com/images/logo.png" 
-              alt="M.P. Birla Foundation H.S. School Logo"
-              width={150}
-              height={150}
-              className="mb-8"
-              unoptimized
-          />
-          <div className="w-full max-w-xs">
-            <Progress value={progress} className="h-2" />
-          </div>
-      </div>
-    );
-}
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user } = useAuth();
   const pathname = usePathname();
 
   const filteredNavItems = user ? navItems.filter(item => item.roles.includes(user.role)) : [];
@@ -98,10 +62,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       ))}
     </nav>
   );
-
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -128,7 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col">
-              <SheetTitle>Navigation Menu</SheetTitle>
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
               <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold mb-4">
                 <Icons.logo className="h-6 w-6 text-primary" />
                 <span className="font-headline">CampusConnect</span>
@@ -139,11 +99,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="w-full flex-1" />
           <UserNav />
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-auto">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-auto motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4">
           {children}
         </main>
       </div>
     </div>
   );
 }
-    
