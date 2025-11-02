@@ -15,13 +15,13 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { Icons } from '@/components/icons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getDocs, query, collection, where, limit, doc, updateDoc } from 'firebase/firestore';
+import { getDocs, query, collection, where, limit, doc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, isLoading: isAuthLoading } = useAuth();
+  const { login, isAuthLoading } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,6 +85,7 @@ export default function LoginPage() {
       const userData = foundUser.data();
       const userId = foundUser.id;
       
+      // If email/password don't exist on the doc, create them (first login)
       if (!userData.email || !userData.password) {
         let userDocRef;
         if (role === 'student') {
@@ -94,8 +95,10 @@ export default function LoginPage() {
         } else { // admin
             userDocRef = doc(firestore, 'admins', userId);
         }
-        await updateDoc(userDocRef, { email, password });
+        // Use setDoc with merge to avoid overwriting existing data
+        await setDoc(userDocRef, { email, password }, { merge: true });
       } else {
+        // If they do exist, validate them
         if(userData.email !== email || userData.password !== password) {
             setError("Invalid email or password.");
             setIsSubmitting(false);
@@ -113,13 +116,13 @@ export default function LoginPage() {
       
       login(userToLogin);
 
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       setError("An error occurred during login. Please try again.");
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Could not connect to the database or an unexpected error occurred."
+        description: e.message || "Could not connect to the database or an unexpected error occurred."
       })
     } finally {
         setIsSubmitting(false);

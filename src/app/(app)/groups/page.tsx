@@ -62,7 +62,6 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
         await addDoc(messagesCollection, messageData);
         setNewMessage('');
     } catch (error) {
-        console.error("Error sending message:", error);
         const permissionError = new FirestorePermissionError({
             path: `groups/${groupName}/messages`,
             operation: 'create',
@@ -71,8 +70,10 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
         errorEmitter.emit('permission-error', permissionError);
     }
   };
+  
+  const totalLoading = isLoading || isAuthLoading;
 
-  if (isLoading || isAuthLoading) {
+  if (totalLoading) {
     return <div className="p-6">Loading messages...</div>
   }
 
@@ -136,7 +137,7 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
 };
 
 export default function GroupsPage() {
-    const { user, isAuthLoading } = useAuth();
+    const { isAuthLoading } = useAuth();
 
     if(isAuthLoading) {
         return (

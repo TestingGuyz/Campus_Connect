@@ -87,7 +87,6 @@ function TeacherView() {
             // Reset form
             setTitle(''); setSubject(''); setDueDate(''); setClassId(''); setSectionId('');
         }).catch(error => {
-            console.error(error);
             const permissionError = new FirestorePermissionError({
                 path: 'assignments',
                 operation: 'create',
@@ -106,7 +105,6 @@ function TeacherView() {
                 toast({ title: 'Success', description: 'Assignment deleted.' });
             })
             .catch(error => {
-                console.error(error);
                 const permissionError = new FirestorePermissionError({
                     path: `assignments/${assignmentId}`,
                     operation: 'delete',
@@ -218,9 +216,9 @@ function StudentView() {
     const [combinedAssignments, setCombinedAssignments] = useState<(Assignment & Partial<StudentAssignment>)[]>([]);
 
     useEffect(() => {
-        if (classAssignments) {
+        if (classAssignments && studentAssignmentsData) {
             const combined = classAssignments.map(assignment => {
-                const studentData = studentAssignmentsData?.find(sa => sa.assignmentId === assignment.id);
+                const studentData = studentAssignmentsData.find(sa => sa.assignmentId === assignment.id);
                 return {
                     ...assignment,
                     status: studentData?.status || 'Not Started',
@@ -228,6 +226,13 @@ function StudentView() {
                     studentAssignmentId: studentData?.id,
                 };
             });
+            setCombinedAssignments(combined);
+        } else if (classAssignments) {
+            const combined = classAssignments.map(assignment => ({
+                 ...assignment,
+                 status: 'Not Started' as const,
+                 priority: 'Medium' as const,
+            }));
             setCombinedAssignments(combined);
         }
     }, [classAssignments, studentAssignmentsData]);
@@ -241,7 +246,6 @@ function StudentView() {
             updateDoc(docRef, { [field]: value })
                 .then(() => toast({ title: 'Updated!', description: `Assignment ${field} set to ${value}.`}))
                 .catch(error => {
-                    console.error("Failed to update assignment", error);
                     const permissionError = new FirestorePermissionError({
                         path: `student-assignments/${studentAssignmentId}`,
                         operation: 'update',
@@ -260,7 +264,6 @@ function StudentView() {
             addDoc(collection(firestore, 'student-assignments'), payload)
                 .then(() => toast({ title: 'Updated!', description: `Assignment ${field} set to ${value}.`}))
                 .catch(error => {
-                    console.error("Failed to create assignment data", error);
                     const permissionError = new FirestorePermissionError({
                         path: 'student-assignments',
                         operation: 'create',
@@ -272,8 +275,9 @@ function StudentView() {
         }
     }
 
-
-  if (isLoadingAssignments || isLoadingStudentData || isAuthLoading) {
+  const isLoading = isLoadingAssignments || isLoadingStudentData || isAuthLoading;
+  
+  if (isLoading) {
       return <Card><CardContent className="p-6">Loading assignments...</CardContent></Card>
   }
 

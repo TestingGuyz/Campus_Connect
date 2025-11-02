@@ -71,7 +71,6 @@ function AddEventModal({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (ope
             setIsOpen(false);
             setTitle(''); setDate(''); setType('other'); setPriority('Medium');
         } catch (error) {
-            console.error('Error adding event: ', error);
             const permissionError = new FirestorePermissionError({
                 path: 'events',
                 operation: 'create',
@@ -157,10 +156,10 @@ export default function CalendarPage() {
   
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
 
+  const isLoading = isAuthLoading || isLoadingEvents;
+  
   const sortedEvents = events?.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const upcomingEvents = sortedEvents?.filter(e => new Date(e.date) >= new Date()) || [];
-
-  const isLoading = isAuthLoading || isLoadingEvents;
 
   return (
     <div className="space-y-6">

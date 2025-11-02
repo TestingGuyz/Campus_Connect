@@ -56,23 +56,22 @@ export default function StudentDashboard() {
     }, [firestore, user, isAuthLoading]);
   const { data: assignments, isLoading: isLoadingAssignments } = useCollection<Assignment>(assignmentsQuery);
   
-  const upcomingAssignments = assignments
-    ?.filter(a => new Date(a.dueDate) >= new Date())
-    .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-    .slice(0, 3) || [];
-  
   const eventsQuery = useMemoFirebase(() => {
     if (isAuthLoading || !user || !firestore) return null;
     return collection(firestore, 'events');
   }, [firestore, user, isAuthLoading]);
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
 
+  const isLoading = isAuthLoading || isLoadingAssignments || isLoadingEvents;
+  
+  const upcomingAssignments = assignments
+    ?.filter(a => new Date(a.dueDate) >= new Date())
+    .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .slice(0, 3) || [];
+  
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
                                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                    .slice(0, 3) || [];
-
-  const isLoading = isAuthLoading || isLoadingAssignments || isLoadingEvents;
-
 
   return (
     <div className="flex flex-col gap-6">

@@ -80,11 +80,11 @@ export default function AdminDashboard() {
 
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
 
+  const isLoading = isAuthLoading || isLoadingEvents;
+
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
                                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                    .slice(0, 5) || [];
-
-  const isLoading = isAuthLoading || isLoadingEvents;
 
   return (
     <div className="flex flex-col gap-6">

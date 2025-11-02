@@ -63,9 +63,9 @@ export default function TimetablePage() {
     useEffect(() => {
         const fetchTimetable = async () => {
             if (isAuthLoading || !firestore || !user) {
-                setIsLoading(true);
                 return;
             };
+
             if (user.role !== 'student' || !user.className || !user.sectionName) {
                 setIsLoading(false);
                 return;
@@ -79,7 +79,6 @@ export default function TimetablePage() {
                     const timetableDoc = timetableSnapshot.docs[0]; // Assuming one timetable doc per section
                     setTimetable(timetableDoc.data() as TimetableData);
                 } else {
-                    console.log("No timetable found for this section.");
                     setTimetable(null);
                 }
             } catch (error) {
@@ -92,7 +91,8 @@ export default function TimetablePage() {
 
         fetchTimetable();
     }, [user, firestore, isAuthLoading]);
-
+  
+  const totalLoading = isLoading || isAuthLoading;
   const timeSlots = timetable ? Object.keys(timetable).sort() : [];
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -107,7 +107,7 @@ export default function TimetablePage() {
         </p>
       </div>
 
-      {isLoading ? <LoadingSkeleton /> : timetable ? (
+      {totalLoading ? <LoadingSkeleton /> : timetable ? (
         <Card>
             <CardContent className="pt-6">
             <Table>

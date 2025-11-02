@@ -11,6 +11,8 @@ import { useFirestore } from '@/firebase';
 import { addDoc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 function AdminSettings() {
     const firestore = useFirestore();
@@ -26,15 +28,21 @@ function AdminSettings() {
             return;
         }
         setIsSubmitting(true);
+        const studentData = { name };
         try {
             const studentCollectionRef = collection(firestore, `classes/${classId}/sections/${sectionId}/students`);
-            await addDoc(studentCollectionRef, { name });
+            await addDoc(studentCollectionRef, studentData);
             toast({ title: 'Success', description: `Student ${name} added to class ${classId}-${sectionId}.` });
             setName('');
             setClassId('');
             setSectionId('');
         } catch (error) {
-            console.error('Error adding student:', error);
+            const permissionError = new FirestorePermissionError({
+                path: `classes/${classId}/sections/${sectionId}/students`,
+                operation: 'create',
+                requestResourceData: studentData
+            });
+            errorEmitter.emit('permission-error', permissionError);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not add student.' });
         } finally {
             setIsSubmitting(false);
@@ -75,7 +83,11 @@ function AdminSettings() {
 }
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthLoading } = useAuth();
+
+  if (isAuthLoading) {
+    return <Card><CardContent className="p-6">Loading settings...</CardContent></Card>;
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
