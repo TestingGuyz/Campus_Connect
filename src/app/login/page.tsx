@@ -22,7 +22,7 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
@@ -49,6 +49,8 @@ export default function LoginPage() {
 
     try {
       let userQuery;
+      let userRole: 'student' | 'teacher' | 'admin' = role;
+      
       if (role === 'student') {
         if(!name || !className || !section) {
             setError('Please fill in all fields for student login.');
@@ -104,9 +106,15 @@ export default function LoginPage() {
         }
       }
 
-      // Mock login for now
-      login({ id: userId, name: userData.name, email: email, role });
-      router.push('/dashboard');
+      const userToLogin = {
+        id: userId,
+        name: userData.name,
+        email: email,
+        role: userRole,
+        ...(userRole === 'student' && { className: className, sectionName: section })
+      };
+      
+      login(userToLogin);
 
     } catch (e) {
       console.error(e);
@@ -123,8 +131,8 @@ export default function LoginPage() {
 
   const handleQuickLogin = (role: 'admin' | 'student') => {
      const mockUsers: Record<string, any> = {
-      'admin': { id: 'adm123', name: 'Dr. Evelyn Reed', email: 'admin@campus.com', role: 'admin' },
-      'student': { id: 'stu456', name: 'Alex Johnson', email: 'student@campus.com', role: 'student' },
+      'admin': { id: 'admin1', name: 'Dr. Evelyn Reed', email: 'admin@campus.com', role: 'admin' },
+      'student': { id: 'student1', name: 'Alex Johnson', email: 'student@campus.com', role: 'student', className: '10', sectionName: 'A' },
     };
     login(mockUsers[role]);
     router.push('/dashboard');

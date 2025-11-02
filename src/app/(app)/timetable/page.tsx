@@ -1,18 +1,18 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/use-auth';
+import { useFirestore } from '@/firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const timetable = {
-  "9:00 - 10:00": { Monday: "Mathematics", Tuesday: "Physics", Wednesday: "Mathematics", Thursday: "Physics", Friday: "Literature" },
-  "10:00 - 11:00": { Monday: "Physics", Tuesday: "History", Wednesday: "Physics", Thursday: "Literature", Friday: "Mathematics" },
-  "11:00 - 12:00": { Monday: "Literature", Tuesday: "Mathematics", Wednesday: "History", Thursday: "Mathematics", Friday: "Physics" },
-  "12:00 - 1:00": { Monday: "Lunch", Tuesday: "Lunch", Wednesday: "Lunch", Thursday: "Lunch", Friday: "Lunch" },
-  "1:00 - 2:00": { Monday: "History", Tuesday: "Literature", Wednesday: "Assembly", Thursday: "History", Friday: "Sports" },
-  "2:00 - 3:00": { Monday: "Lab", Tuesday: "Lab", Wednesday: "Library", Thursday: "Lab", Friday: "Sports" },
+type TimetableData = {
+  [time: string]: {
+    [day: string]: string;
+  };
 };
-
-const timeSlots = Object.keys(timetable);
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 const getSubjectBadgeColor = (subject: string) => {
     switch(subject.toLowerCase()){
@@ -23,38 +23,28 @@ const getSubjectBadgeColor = (subject: string) => {
         case 'sports': return 'bg-purple-200 text-purple-800 border-purple-300';
         case 'lab': return 'bg-indigo-200 text-indigo-800 border-indigo-300';
         case 'lunch': return 'bg-gray-200 text-gray-800 border-gray-300';
+        case 'art': return 'bg-pink-200 text-pink-800 border-pink-300';
+        case 'music': return 'bg-teal-200 text-teal-800 border-teal-300';
         default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
 }
 
-export default function TimetablePage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-headline font-bold">Weekly Timetable</h1>
-        <p className="text-muted-foreground">Here is your class schedule for the week.</p>
-      </div>
-      <Card>
+const LoadingSkeleton = () => (
+    <Card>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[150px]">Time</TableHead>
-                {days.map(day => <TableHead key={day}>{day}</TableHead>)}
+                <TableHead className="w-[150px]"><Skeleton className="h-6 w-24" /></TableHead>
+                {Array.from({ length: 5 }).map((_, i) => <TableHead key={i}><Skeleton className="h-6 w-24" /></TableHead>)}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {timeSlots.map(time => (
-                <TableRow key={time}>
-                  <TableCell className="font-medium">{time}</TableCell>
-                  {days.map(day => (
-                    <TableCell key={day}>
-                      {timetable[time as keyof typeof timetable][day as keyof typeof timetable[keyof typeof timetable]] && (
-                         <Badge variant="outline" className={`font-semibold ${getSubjectBadgeColor(timetable[time as keyof typeof timetable][day as keyof typeof timetable[keyof typeof timetable]])}`}>
-                            {timetable[time as keyof typeof timetable][day as keyof typeof timetable[keyof typeof timetable]]}
-                         </Badge>
-                      )}
-                    </TableCell>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <TableCell key={j}><Skeleton className="h-8 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))}
@@ -62,6 +52,96 @@ export default function TimetablePage() {
           </Table>
         </CardContent>
       </Card>
+);
+
+export default function TimetablePage() {
+    const { user } = useAuth();
+    const firestore = useFirestore();
+    const [timetable, setTimetable] = useState<TimetableData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchTimetable = async () => {
+            if (!firestore || !user || user.role !== 'student' || !user.className || !user.sectionName) {
+                // For admin/teacher or if data is missing, load a default/empty state or a specific timetable.
+                // For this example, we'll just stop loading.
+                setIsLoading(false);
+                return;
+            };
+
+            setIsLoading(true);
+            try {
+                const timetableCollectionRef = collection(firestore, `classes/${user.className}/sections/${user.sectionName}/timetable`);
+                const timetableSnapshot = await getDocs(timetableCollectionRef);
+                
+                if (!timetableSnapshot.empty) {
+                    const timetableDoc = timetableSnapshot.docs[0]; // Assuming one timetable doc per section
+                    setTimetable(timetableDoc.data() as TimetableData);
+                } else {
+                    console.log("No timetable found for this section.");
+                    setTimetable(null);
+                }
+            } catch (error) {
+                console.error("Error fetching timetable:", error);
+                setTimetable(null);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTimetable();
+    }, [user, firestore]);
+
+  const timeSlots = timetable ? Object.keys(timetable).sort() : [];
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-headline font-bold">Weekly Timetable</h1>
+        <p className="text-muted-foreground">
+            {user?.role === 'student' 
+                ? `Class schedule for Grade ${user.className} - Section ${user.sectionName}.`
+                : 'Your weekly class schedule.'}
+        </p>
+      </div>
+
+      {isLoading ? <LoadingSkeleton /> : timetable ? (
+        <Card>
+            <CardContent className="pt-6">
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead className="w-[150px]">Time</TableHead>
+                    {days.map(day => <TableHead key={day}>{day}</TableHead>)}
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {timeSlots.map(time => (
+                    <TableRow key={time}>
+                    <TableCell className="font-medium">{time}</TableCell>
+                    {days.map(day => (
+                        <TableCell key={day}>
+                        {timetable[time as keyof typeof timetable]?.[day as keyof typeof timetable[keyof typeof timetable]] && (
+                            <Badge variant="outline" className={`font-semibold ${getSubjectBadgeColor(timetable[time as keyof typeof timetable][day as keyof typeof timetable[keyof typeof timetable]])}`}>
+                                {timetable[time as keyof typeof timetable][day as keyof typeof timetable[keyof typeof timetable]]}
+                            </Badge>
+                        )}
+                        </TableCell>
+                    ))}
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+            </CardContent>
+        </Card>
+      ) : (
+        <Card>
+            <CardContent className="pt-6 text-center">
+                <p>No timetable available for your class and section.</p>
+            </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -12,9 +12,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/use-auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export function UserNav() {
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   if (!user) {
     return null;
@@ -45,12 +48,16 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => { /* Navigate to profile */ }}>
-            Profile
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => { /* Navigate to settings */ }}>
-            Settings
-          </DropdownMenuItem>
+          <Link href="/profile" passHref>
+            <DropdownMenuItem>
+              Profile
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/settings" passHref>
+            <DropdownMenuItem>
+              Settings
+            </DropdownMenuItem>
+          </Link>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout}>

@@ -9,6 +9,7 @@ import {
   Clock,
   LayoutDashboard,
   Menu,
+  Settings,
   ShieldAlert,
   User,
   Users,
@@ -25,18 +26,19 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles: ('admin' | 'student')[];
+  roles: ('admin' | 'student' | 'teacher')[];
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'student'] },
-  { href: '/groups', label: 'Groups', icon: Users, roles: ['admin', 'student'] },
-  { href: '/calendar', label: 'Calendar', icon: Calendar, roles: ['admin', 'student'] },
-  { href: '/attendance', label: 'Attendance', icon: CheckCircle2, roles: ['admin'] },
-  { href: '/profile', label: 'Profile', icon: User, roles: ['student'] },
-  { href: '/assignments', label: 'Assignments', icon: Book, roles: ['admin', 'student'] },
-  { href: '/timetable', label: 'Time Table', icon: Clock, roles: ['student'] },
-  { href: '/contact-admin', label: 'Contact Admin', icon: ShieldAlert, roles: ['admin', 'student'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'student', 'teacher'] },
+  { href: '/profile', label: 'Profile', icon: User, roles: ['student', 'teacher'] },
+  { href: '/attendance', label: 'Attendance', icon: CheckCircle2, roles: ['admin', 'teacher'] },
+  { href: '/assignments', label: 'Assignments', icon: Book, roles: ['admin', 'student', 'teacher'] },
+  { href: '/timetable', label: 'Time Table', icon: Clock, roles: ['student', 'teacher'] },
+  { href: '/groups', label: 'Groups', icon: Users, roles: ['admin', 'student', 'teacher'] },
+  { href: '/calendar', label: 'Calendar', icon: Calendar, roles: ['admin', 'student', 'teacher'] },
+  { href: '/contact-admin', label: 'Contact Admin', icon: ShieldAlert, roles: ['student', 'teacher'] },
+  { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'student', 'teacher'] },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
