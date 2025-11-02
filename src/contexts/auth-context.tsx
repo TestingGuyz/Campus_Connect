@@ -4,7 +4,7 @@ import { createContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
-import { useFirebaseUser } from '@/firebase/provider'; // Updated import
+import { useFirebaseUser } from '@/firebase/provider';
 
 export type User = {
   id: string;
@@ -16,7 +16,8 @@ export type User = {
 };
 
 export type AuthContextType = {
-  user: User | null; // This is your application-specific user profile
+  user: User | null;
+  firebaseUser: import('firebase/auth').User | null;
   login: (user: User) => void;
   logout: () => void;
   isLoading: boolean; // This combines multiple loading states
@@ -62,17 +63,22 @@ function LoadingScreen() {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [appUser, setAppUser] = useState<User | null>(null);
-  const [isAppLoading, setIsAppLoading] = useState(true); // For loading the user profile from localStorage
-  const { isLoading: isAuthLoading } = useFirebaseUser(); // Firebase's auth loading state
+  const [isAppLoading, setIsAppLoading] = useState(true);
+  const { user: firebaseUser, isLoading: isAuthLoading } = useFirebaseUser();
   const router = useRouter();
   const pathname = usePathname();
 
-  // On initial load, try to get user profile from localStorage
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('campus-connect-user');
       if (storedUser) {
-        setAppUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        // Basic validation of the stored user
+        if (parsedUser && parsedUser.id && parsedUser.role) {
+          setAppUser(parsedUser);
+        } else {
+          localStorage.removeItem('campus-connect-user');
+        }
       }
     } catch (error) {
       console.error('Failed to parse user from localStorage', error);
@@ -82,20 +88,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // This is the single source of truth for loading state across the app
   const isLoading = isAppLoading || isAuthLoading;
 
-  // This effect handles routing based on auth state
   useEffect(() => {
-    // If loading is finished and there's no user, redirect to login (unless already there)
-    if (!isLoading && !appUser && pathname !== '/login') {
+    if (isLoading) return; // Wait until all loading is complete
+
+    if (!firebaseUser && !appUser && pathname !== '/login') {
       router.replace('/login');
     }
-    // If loading is finished and there IS a user, redirect to dashboard if they are on the login page
-    if (!isLoading && appUser && pathname === '/login') {
-      router.replace('/dashboard');
+    
+    if (firebaseUser && appUser && pathname === '/login') {
+        router.replace('/dashboard');
     }
-  }, [appUser, isLoading, pathname, router]);
+
+    // This handles the case where firebase auth state is cleared but localStorage isn't
+    if (!firebaseUser && appUser) {
+        logout();
+    }
+
+  }, [appUser, firebaseUser, isLoading, pathname, router]);
 
   const login = (newUser: User) => {
     localStorage.setItem('campus-connect-user', JSON.stringify(newUser));
@@ -106,18 +117,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem('campus-connect-user');
     setAppUser(null);
+    // We don't need to call firebase logout here as it will be handled by the auth provider if we want to add it
     router.push('/login');
   };
   
-  // Show loading screen only if we are in a loading state AND not on the login page.
-  // The login page has its own UI and shouldn't be replaced by a loading screen.
   if (isLoading && pathname !== '/login') {
     return <LoadingScreen />;
   }
 
-  // If we are done loading and there is no user, but we are still rendering children (e.g. on the login page),
-  // we pass the null user value to the context.
-  const contextValue = { user: appUser, login, logout, isLoading };
+  const contextValue = { user: appUser, firebaseUser, login, logout, isLoading };
 
   return (
     <AuthContext.Provider value={contextValue}>

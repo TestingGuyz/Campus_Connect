@@ -8,8 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { NotAuthorized } from '@/components/not-authorized';
 
 const students = [
   { id: 'S001', name: 'Alex Johnson', class: '10A' },
@@ -20,17 +19,19 @@ const students = [
 ];
 
 export default function AttendancePage() {
-  const { user } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if(user && user.role !== 'admin') {
-      router.replace('/dashboard');
-    }
-  }, [user, router]);
+  const { user, isLoading } = useAuth();
   
-  if (user?.role !== 'admin') {
-    return null;
+  if (isLoading) {
+    return (
+        <div className="space-y-6">
+            <h1 className="text-2xl font-headline font-bold">Attendance</h1>
+            <Card><CardContent className="p-6">Loading...</CardContent></Card>
+        </div>
+    );
+  }
+
+  if (user?.role === 'student') {
+    return <NotAuthorized />;
   }
 
   return (
