@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -121,6 +121,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold mb-4">
                 <Icons.logo className="h-6 w-6 text-primary" />
                 <span className="font-headline">CampusConnect</span>
