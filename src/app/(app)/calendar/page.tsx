@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -136,17 +136,16 @@ function AddEventModal({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (ope
 
 
 export default function CalendarPage() {
-  const { user: authUser } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const firestore = useFirestore();
-  const { user } = useUser();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const eventsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || isAuthLoading || !user) return null;
     return collection(firestore, 'events');
-  }, [firestore, user]);
-  const { data: events, isLoading } = useCollection<SchoolEvent>(eventsQuery);
+  }, [firestore, user, isAuthLoading]);
+  const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
 
   const sortedEvents = events?.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const upcomingEvents = sortedEvents?.filter(e => new Date(e.date) >= new Date()) || [];
@@ -158,7 +157,7 @@ export default function CalendarPage() {
           <h1 className="text-2xl font-headline font-bold">Calendar</h1>
           <p className="text-muted-foreground">View and manage school events and schedules.</p>
         </div>
-        {authUser?.role === 'admin' && (
+        {user?.role === 'admin' && (
           <>
             <Button className="mt-4 sm:mt-0" onClick={() => setIsModalOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -192,7 +191,7 @@ export default function CalendarPage() {
             <CardDescription>A list of important dates and events.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isLoading && <p>Loading events...</p>}
+            {isLoadingEvents && <p>Loading events...</p>}
             {upcomingEvents.map((event) => (
               <div key={event.id} className="flex items-start gap-4">
                 <div className="flex flex-col items-center justify-center bg-muted text-muted-foreground rounded-md h-12 w-12 shrink-0">
@@ -208,7 +207,7 @@ export default function CalendarPage() {
                 </div>
               </div>
             ))}
-            {upcomingEvents.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No upcoming events.</p>}
+            {upcomingEvents.length === 0 && !isLoadingEvents && <p className="text-sm text-muted-foreground">No upcoming events.</p>}
           </CardContent>
         </Card>
       </div>
