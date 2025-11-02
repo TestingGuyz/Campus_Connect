@@ -127,6 +127,47 @@
         "15:00-16:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } },
         "16:00-17:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } }
       }
+    },
+    "Assignment": {
+      "title": "Assignment",
+      "description": "Represents an assignment for a class section.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date" },
+        "fileUrl": { "type": "string" },
+        "fileName": { "type": "string" },
+        "classId": { "type": "string" },
+        "sectionId": { "type": "string" }
+      },
+      "required": ["title", "subject", "dueDate", "classId", "sectionId"]
+    },
+    "StudentAssignment": {
+      "title": "Student Assignment",
+      "description": "Tracks a student's progress on an assignment.",
+      "type": "object",
+      "properties": {
+        "assignmentId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Not Started", "In Progress", "Completed"] },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High"] },
+        "submissionUrl": { "type": "string" }
+      },
+      "required": ["assignmentId", "studentId", "status", "priority"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "Represents a message in a group chat.",
+      "type": "object",
+      "properties": {
+        "authorName": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorAvatarId": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "object" }
+      },
+      "required": ["authorName", "authorId", "message", "timestamp"]
     }
   },
   "auth": {
@@ -159,6 +200,12 @@
                   "$ref": "#/entities/Timetable"
                 },
                 "description": "Sub-collection for the weekly timetable of a section."
+              },
+              "assignments": {
+                "schema": {
+                  "$ref": "#/entities/Assignment"
+                },
+                "description": "Assignments for a specific class and section."
               }
             }
           }
@@ -175,6 +222,16 @@
           "$ref": "#/entities/Teacher"
         },
         "description": "Collection for teacher accounts."
+      },
+      "student-assignments": {
+        "schema": {
+          "$ref": "#/entities/StudentAssignment"
+        },
+        "description": "Tracks assignment status for each student."
+      },
+      "groups": {
+        "schema": { "$ref": "#/entities/ChatMessage" },
+        "description": "Collection for group chat messages. Sub-collections are group names."
       }
     },
     "initialData": [
@@ -245,3 +302,4 @@
     ]
   }
 }
+    

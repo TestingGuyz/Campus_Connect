@@ -20,7 +20,8 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import Image from 'next/image';
 
 interface NavItem {
   href: string;
@@ -40,6 +41,40 @@ const navItems: NavItem[] = [
   { href: '/contact-admin', label: 'Contact Admin', icon: ShieldAlert, roles: ['student', 'teacher'] },
   { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'student', 'teacher'] },
 ];
+
+function LoadingScreen() {
+    const [progress, setProgress] = React.useState(0);
+
+    React.useEffect(() => {
+        const timer = setInterval(() => {
+            setProgress((prev) => {
+                if (prev >= 95) {
+                    clearInterval(timer);
+                    return 95;
+                }
+                return prev + Math.random() * 10;
+            });
+        }, 300);
+
+        return () => clearInterval(timer);
+    }, []);
+
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+          <Image 
+              src="https://www.mpbfoundationhsschool.com/images/logo.png" 
+              alt="M.P. Birla Foundation H.S. School Logo"
+              width={150}
+              height={150}
+              className="mb-8"
+              unoptimized
+          />
+          <div className="w-full max-w-xs">
+            <Progress value={progress} className="h-2" />
+          </div>
+      </div>
+    );
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -65,37 +100,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen w-full">
-        <div className="hidden border-r bg-muted/40 md:block">
-            <div className="flex h-full max-h-screen flex-col gap-2">
-                <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-                    <Skeleton className="h-8 w-32" />
-                </div>
-                <div className="flex-1">
-                    <nav className="grid items-start px-2 text-sm font-medium lg:px-4 gap-2">
-                        {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-                    </nav>
-                </div>
-            </div>
-        </div>
-        <div className="flex flex-col flex-1">
-            <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-                <Skeleton className="h-8 w-8 md:hidden" />
-                <div className="w-full flex-1">
-                    <Skeleton className="h-8 w-1/2" />
-                </div>
-                <Skeleton className="h-8 w-8 rounded-full" />
-            </header>
-            <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-                <Skeleton className="h-8 w-48" />
-                <div className="flex-1 rounded-lg border border-dashed shadow-sm p-4">
-                  <Skeleton className="h-full w-full" />
-                </div>
-            </main>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -123,7 +128,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col">
-              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              <SheetTitle>Navigation Menu</SheetTitle>
               <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold mb-4">
                 <Icons.logo className="h-6 w-6 text-primary" />
                 <span className="font-headline">CampusConnect</span>
@@ -141,3 +146,4 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+    
