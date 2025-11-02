@@ -36,7 +36,7 @@ const navItems: NavItem[] = [
   { href: '/timetable', label: 'Time Table', icon: Clock, roles: ['student', 'teacher'] },
   { href: '/groups', label: 'Groups', icon: Users, roles: ['admin', 'student', 'teacher'] },
   { href: '/calendar', label: 'Calendar', icon: Calendar, roles: ['admin', 'student', 'teacher'] },
-  { href: '/contact-admin', label: 'Contact Admin', icon: ShieldAlert, roles: ['student', 'teacher'] },
+  { href: '/contact-admin', label: 'Contact Admin', icon: ShieldAlert, roles: ['student'] },
   { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'student', 'teacher'] },
 ];
 

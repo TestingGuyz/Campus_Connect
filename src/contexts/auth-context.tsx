@@ -4,7 +4,6 @@ import { createContext, useState, ReactNode, useEffect, useCallback } from 'reac
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
-import { useFirebaseUser } from '@/firebase/provider';
 import { Icons } from '@/components/icons';
 
 export type User = {
@@ -18,10 +17,9 @@ export type User = {
 
 export type AuthContextType = {
   user: User | null;
-  firebaseUser: import('firebase/auth').User | null;
   login: (user: User) => void;
   logout: () => void;
-  isLoading: boolean; // True if we are still waiting for initial auth state
+  isAuthLoading: boolean; 
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,11 +56,10 @@ function LoadingScreen() {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [appUser, setAppUser] = useState<User | null>(null);
-  const { user: firebaseUser, isLoading: isFirebaseUserLoading } = useFirebaseUser();
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
-  // Load app user from localStorage on initial mount
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('campus-connect-user');
@@ -73,6 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Failed to parse user from localStorage', error);
       localStorage.removeItem('campus-connect-user');
     }
+    setIsAuthLoading(false); 
   }, []);
 
   const login = useCallback((newUser: User) => {
@@ -87,37 +85,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   }, [router]);
 
-  // Main effect for handling authentication state and redirects
   useEffect(() => {
-    // Don't do anything until Firebase has confirmed the auth state
-    if (isFirebaseUserLoading) {
+    if (isAuthLoading) {
       return;
     }
 
     const isAuthPage = pathname === '/login';
 
     if (appUser) {
-      // If we have an app user...
       if (isAuthPage) {
-        // ...and we're on the login page, redirect to dashboard.
         router.replace('/dashboard');
       }
-      // ...and we're not on the login page, do nothing, let them browse.
     } else {
-      // If we DON'T have an app user...
       if (!isAuthPage) {
-        // ...and we are NOT on the login page, redirect to login.
         router.replace('/login');
       }
     }
-  }, [appUser, isFirebaseUserLoading, pathname, router]);
+  }, [appUser, isAuthLoading, pathname, router]);
 
-
-  // This is the gatekeeper. We show a loading screen if:
-  // 1. Firebase is still figuring out who is logged in.
-  // 2. We have a user but are still on the login page (waiting for redirect).
-  // 3. We have no user and are not on the login page (waiting for redirect).
-  const showLoading = isFirebaseUserLoading || (appUser && pathname === '/login') || (!appUser && pathname !== '/login');
+  const showLoading = isAuthLoading || (appUser && pathname === '/login') || (!appUser && pathname !== '/login');
   
   if (showLoading) {
     return <LoadingScreen />;
@@ -125,10 +111,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const contextValue: AuthContextType = { 
       user: appUser, 
-      firebaseUser, 
       login, 
       logout, 
-      isLoading: isFirebaseUserLoading 
+      isAuthLoading 
   };
 
   return (
