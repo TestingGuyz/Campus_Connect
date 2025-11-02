@@ -1,3 +1,4 @@
+
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -300,40 +301,47 @@ function StudentView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {combinedAssignments.map(assignment => (
-              <TableRow key={assignment.id} className={assignment.status === 'Completed' ? 'bg-muted/50' : ''}>
-                <TableCell>
-                  <Checkbox 
-                    checked={assignment.status === 'Completed'} 
-                    onCheckedChange={(checked) => handleStudentAssignmentChange(assignment.id, (assignment as any).studentAssignmentId, 'status', checked ? 'Completed' : 'In Progress')}
-                  />
-                </TableCell>
-                <TableCell className={`font-medium ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.title}</TableCell>
-                <TableCell className={`hidden sm:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.subject}</TableCell>
-                <TableCell className={`hidden md:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.dueDate}</TableCell>
-                <TableCell>
-                  <Select 
-                    defaultValue={assignment.priority}
-                    onValueChange={(value) => handleStudentAssignmentChange(assignment.id, (assignment as any).studentAssignmentId, 'priority', value)}
-                  >
-                    <SelectTrigger className="w-[100px] h-8 text-xs">
-                      <SelectValue placeholder="Priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="High"><Badge variant={getPriorityBadgeVariant("High")}>High</Badge></SelectItem>
-                      <SelectItem value="Medium"><Badge variant={getPriorityBadgeVariant("Medium")}>Medium</Badge></SelectItem>
-                      <SelectItem value="Low"><Badge variant={getPriorityBadgeVariant("Low")}>Low</Badge></SelectItem>
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="outline" size="sm" disabled>
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-             {combinedAssignments.length === 0 && <p className="text-sm text-muted-foreground p-4">No assignments found for your class.</p>}
+            {combinedAssignments.length > 0 ? (
+                combinedAssignments.map(assignment => (
+                <TableRow key={assignment.id} className={assignment.status === 'Completed' ? 'bg-muted/50' : ''}>
+                    <TableCell>
+                    <Checkbox 
+                        checked={assignment.status === 'Completed'} 
+                        onCheckedChange={(checked) => handleStudentAssignmentChange(assignment.id, (assignment as any).studentAssignmentId, 'status', checked ? 'Completed' : 'In Progress')}
+                    />
+                    </TableCell>
+                    <TableCell className={`font-medium ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.title}</TableCell>
+                    <TableCell className={`hidden sm:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.subject}</TableCell>
+                    <TableCell className={`hidden md:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.dueDate}</TableCell>
+                    <TableCell>
+                    <Select 
+                        defaultValue={assignment.priority}
+                        onValueChange={(value) => handleStudentAssignmentChange(assignment.id, (assignment as any).studentAssignmentId, 'priority', value)}
+                    >
+                        <SelectTrigger className="w-[100px] h-8 text-xs">
+                        <SelectValue placeholder="Priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="High"><Badge variant={getPriorityBadgeVariant("High")}>High</Badge></SelectItem>
+                        <SelectItem value="Medium"><Badge variant={getPriorityBadgeVariant("Medium")}>Medium</Badge></SelectItem>
+                        <SelectItem value="Low"><Badge variant={getPriorityBadgeVariant("Low")}>Low</Badge></SelectItem>
+                        </SelectContent>
+                    </Select>
+                    </TableCell>
+                    <TableCell className="text-right">
+                    <Button variant="outline" size="sm" disabled>
+                        <Download className="h-4 w-4" />
+                    </Button>
+                    </TableCell>
+                </TableRow>
+                ))
+            ) : (
+                <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        No assignments found for your class.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>
@@ -379,3 +387,5 @@ export default function AssignmentsPage() {
     </div>
   );
 }
+
+    
