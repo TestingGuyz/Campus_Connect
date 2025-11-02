@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
 import { useFirebaseUser } from '@/firebase/provider';
+import { Icons } from '@/components/icons';
 
 export type User = {
   id: string;
@@ -20,7 +21,7 @@ export type AuthContextType = {
   firebaseUser: import('firebase/auth').User | null;
   login: (user: User) => void;
   logout: () => void;
-  isLoading: boolean; // Combined loading state
+  isLoading: boolean; // True if we are still waiting for initial auth state
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,46 +46,34 @@ function LoadingScreen() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background">
           <div className="mb-8 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-50">
-            <Image 
-                src="https://www.mpbfoundationhsschool.com/images/logo.png" 
-                alt="M.P. Birla Foundation H.S. School Logo"
-                width={150}
-                height={150}
-                unoptimized
-                priority
-            />
+            <Icons.logo className="h-24 w-24 text-primary" />
           </div>
           <div className="w-full max-w-xs">
             <Progress value={progress} className="h-2" />
           </div>
+          <p className="mt-4 text-muted-foreground">Connecting to CampusConnect...</p>
       </div>
     );
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [appUser, setAppUser] = useState<User | null>(null);
-  const [isAppUserLoading, setIsAppUserLoading] = useState(true);
   const { user: firebaseUser, isLoading: isFirebaseUserLoading } = useFirebaseUser();
   const router = useRouter();
   const pathname = usePathname();
 
-  // Effect to load user from localStorage
+  // Load app user from localStorage on initial mount
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('campus-connect-user');
       if (storedUser) {
-        const parsedUser: User = JSON.parse(storedUser);
-        setAppUser(parsedUser);
+        setAppUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error('Failed to parse user from localStorage', error);
       localStorage.removeItem('campus-connect-user');
-    } finally {
-      setIsAppUserLoading(false);
     }
   }, []);
-  
-  const isLoading = isAppUserLoading || isFirebaseUserLoading;
 
   const login = useCallback((newUser: User) => {
     localStorage.setItem('campus-connect-user', JSON.stringify(newUser));
@@ -98,35 +87,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   }, [router]);
 
-  // Effect for handling redirects
+  // Main effect for handling authentication state and redirects
   useEffect(() => {
-    if (isLoading) return; // Don't do anything until loading is complete
+    // Don't do anything until Firebase has confirmed the auth state
+    if (isFirebaseUserLoading) {
+      return;
+    }
 
     const isAuthPage = pathname === '/login';
 
-    if (!appUser && !isAuthPage) {
-      // If no user and not on login page, redirect to login
-      router.replace('/login');
-    } else if (appUser && isAuthPage) {
-      // If there IS a user and we are on the login page, redirect to dashboard
-      router.replace('/dashboard');
+    if (appUser) {
+      // If we have an app user...
+      if (isAuthPage) {
+        // ...and we're on the login page, redirect to dashboard.
+        router.replace('/dashboard');
+      }
+      // ...and we're not on the login page, do nothing, let them browse.
+    } else {
+      // If we DON'T have an app user...
+      if (!isAuthPage) {
+        // ...and we are NOT on the login page, redirect to login.
+        router.replace('/login');
+      }
     }
-  }, [appUser, isLoading, pathname, router]);
+  }, [appUser, isFirebaseUserLoading, pathname, router]);
 
-  // If still loading, or if redirecting, show the loading screen.
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
+
+  // This is the gatekeeper. We show a loading screen if:
+  // 1. Firebase is still figuring out who is logged in.
+  // 2. We have a user but are still on the login page (waiting for redirect).
+  // 3. We have no user and are not on the login page (waiting for redirect).
+  const showLoading = isFirebaseUserLoading || (appUser && pathname === '/login') || (!appUser && pathname !== '/login');
   
-  if (!appUser && pathname !== '/login') {
+  if (showLoading) {
     return <LoadingScreen />;
   }
 
-  if (appUser && pathname === '/login') {
-    return <LoadingScreen />;
-  }
-
-  const contextValue = { user: appUser, firebaseUser, login, logout, isLoading };
+  const contextValue: AuthContextType = { 
+      user: appUser, 
+      firebaseUser, 
+      login, 
+      logout, 
+      isLoading: isFirebaseUserLoading 
+  };
 
   return (
     <AuthContext.Provider value={contextValue}>
