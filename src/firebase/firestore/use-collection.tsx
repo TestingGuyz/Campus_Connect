@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useAuth } from '@/hooks/use-auth';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -62,21 +64,22 @@ export function useCollection<T = any>(
 
   const [data, setData] = useState<StateDataType>(null);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { isAuthLoading } = useAuth();
+  const [isHookLoading, setIsHookLoading] = useState(true);
 
 
   useEffect(() => {
-    // If there's no query, it means the component is not ready to fetch data.
-    // Set loading to false because we are not 'loading' a query, we are waiting for one.
-    if (!memoizedTargetRefOrQuery) {
+    // If auth is loading OR there's no query, it means the component is not ready to fetch data.
+    // Set loading to true because we are waiting for auth or a valid query.
+    if (isAuthLoading || !memoizedTargetRefOrQuery) {
       setData(null);
-      setIsLoading(false); 
+      setIsHookLoading(true); 
       setError(null);
       return;
     }
     
     // We have a query, so now we are in a loading state.
-    setIsLoading(true);
+    setIsHookLoading(true);
 
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
@@ -87,7 +90,7 @@ export function useCollection<T = any>(
         }
         setData(results);
         setError(null);
-        setIsLoading(false); // Data loaded successfully.
+        setIsHookLoading(false); // Data loaded successfully.
       },
       (serverError: FirestoreError) => {
         const path: string =
@@ -102,18 +105,20 @@ export function useCollection<T = any>(
 
         setError(contextualError);
         setData(null);
-        setIsLoading(false); // Finished with an error.
+        setIsHookLoading(false); // Finished with an error.
 
         errorEmitter.emit('permission-error', contextualError);
       }
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]);
+  }, [memoizedTargetRefOrQuery, isAuthLoading]);
   
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error('useCollection query was not properly memoized using useMemoFirebase. This can cause infinite loops.');
   }
+
+  const isLoading = isAuthLoading || isHookLoading;
   
   return { data, isLoading, error };
 }
