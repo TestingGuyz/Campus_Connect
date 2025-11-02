@@ -20,7 +20,7 @@ export type AuthContextType = {
   firebaseUser: import('firebase/auth').User | null;
   login: (user: User) => void;
   logout: () => void;
-  isLoading: boolean;
+  isLoading: boolean; // Combined loading state
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,72 +63,65 @@ function LoadingScreen() {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [appUser, setAppUser] = useState<User | null>(null);
-  const [isAppLoading, setIsAppLoading] = useState(true);
-  const { user: firebaseUser, isLoading: isAuthLoading } = useFirebaseUser();
+  const [isAppUserLoading, setIsAppUserLoading] = useState(true);
+  const { user: firebaseUser, isLoading: isFirebaseUserLoading } = useFirebaseUser();
   const router = useRouter();
   const pathname = usePathname();
 
+  // Effect to load user from localStorage
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('campus-connect-user');
       if (storedUser) {
         const parsedUser: User = JSON.parse(storedUser);
-        if (parsedUser?.id && parsedUser?.role) {
-          setAppUser(parsedUser);
-        } else {
-          localStorage.removeItem('campus-connect-user');
-        }
+        setAppUser(parsedUser);
       }
     } catch (error) {
       console.error('Failed to parse user from localStorage', error);
       localStorage.removeItem('campus-connect-user');
     } finally {
-      setIsAppLoading(false);
+      setIsAppUserLoading(false);
     }
   }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('campus-connect-user');
-    setAppUser(null);
-    if (pathname !== '/login') {
-      router.push('/login');
-    }
-  }, [router, pathname]);
+  
+  const isLoading = isAppUserLoading || isFirebaseUserLoading;
 
   const login = useCallback((newUser: User) => {
     localStorage.setItem('campus-connect-user', JSON.stringify(newUser));
     setAppUser(newUser);
     router.push('/dashboard');
   }, [router]);
-  
-  const isLoading = isAppLoading || isAuthLoading;
 
+  const logout = useCallback(() => {
+    localStorage.removeItem('campus-connect-user');
+    setAppUser(null);
+    router.push('/login');
+  }, [router]);
+
+  // Effect for handling redirects
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading) return; // Don't do anything until loading is complete
 
     const isAuthPage = pathname === '/login';
 
     if (!appUser && !isAuthPage) {
+      // If no user and not on login page, redirect to login
       router.replace('/login');
+    } else if (appUser && isAuthPage) {
+      // If there IS a user and we are on the login page, redirect to dashboard
+      router.replace('/dashboard');
     }
-    
-    if (appUser && isAuthPage) {
-        router.replace('/dashboard');
-    }
-
   }, [appUser, isLoading, pathname, router]);
 
-  // This prevents rendering children on non-auth pages before auth state is resolved.
-  if (isLoading && pathname !== '/login') {
-    return <LoadingScreen />;
-  }
-
-  // Prevents flicker on the login page
-  if (isLoading && pathname === '/login') {
+  // If still loading, or if redirecting, show the loading screen.
+  if (isLoading) {
     return <LoadingScreen />;
   }
   
-  // If we have a user but are on the login page, don't render children to avoid flicker before redirect
+  if (!appUser && pathname !== '/login') {
+    return <LoadingScreen />;
+  }
+
   if (appUser && pathname === '/login') {
     return <LoadingScreen />;
   }

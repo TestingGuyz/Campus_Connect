@@ -61,7 +61,6 @@ function TeacherView() {
     const [sectionId, setSectionId] = useState('');
     
     const assignmentsQuery = useMemoFirebase(() => {
-        // CRITICAL: Wait for auth to be loaded and user to be present.
         if (isAuthLoading || !user || !firestore) return null;
         return query(collection(firestore, 'assignments'));
     }, [firestore, user, isAuthLoading]);
@@ -116,6 +115,10 @@ function TeacherView() {
                 toast({ variant: 'destructive', title: 'Error', description: 'Could not delete assignment.' });
             });
     }
+    
+    if (isLoading || isAuthLoading) {
+        return <p>Loading assignments...</p>
+    }
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -164,7 +167,6 @@ function TeacherView() {
         </CardHeader>
         <CardContent>
           <ul className="space-y-2">
-            {isLoading && <p>Loading...</p>}
             {assignments?.map(a => (
                 <li key={a.id} className="flex items-center justify-between rounded-md border p-3">
                     <div className="flex items-center gap-3">
@@ -184,6 +186,7 @@ function TeacherView() {
                     </div>
                 </li>
             ))}
+             {assignments?.length === 0 && <p className="text-sm text-muted-foreground">No assignments found.</p>}
           </ul>
         </CardContent>
       </Card>
@@ -196,9 +199,7 @@ function StudentView() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // 1. Fetch assignments for the student's class
     const assignmentsQuery = useMemoFirebase(() => {
-        // CRITICAL: Wait for auth to be loaded and user to have class info.
         if (isAuthLoading || !user?.className || !user?.sectionName || !firestore) return null;
         return query(
             collection(firestore, 'assignments'), 
@@ -208,15 +209,12 @@ function StudentView() {
     }, [firestore, user, isAuthLoading]);
     const { data: classAssignments, isLoading: isLoadingAssignments } = useCollection<Assignment>(assignmentsQuery);
     
-    // 2. Fetch student's specific assignment data (priorities, statuses)
     const studentAssignmentsQuery = useMemoFirebase(() => {
-        // CRITICAL: Wait for auth to be loaded and user to be present.
         if(isAuthLoading || !user || !firestore) return null;
         return query(collection(firestore, 'student-assignments'), where('studentId', '==', user.id));
     }, [firestore, user, isAuthLoading]);
     const { data: studentAssignmentsData, isLoading: isLoadingStudentData } = useCollection<StudentAssignment>(studentAssignmentsQuery);
     
-    // 3. Combine the data
     const [combinedAssignments, setCombinedAssignments] = useState<(Assignment & Partial<StudentAssignment>)[]>([]);
 
     useEffect(() => {
@@ -227,7 +225,7 @@ function StudentView() {
                     ...assignment,
                     status: studentData?.status || 'Not Started',
                     priority: studentData?.priority || 'Medium',
-                    studentAssignmentId: studentData?.id, // for updates
+                    studentAssignmentId: studentData?.id,
                 };
             });
             setCombinedAssignments(combined);
@@ -239,7 +237,6 @@ function StudentView() {
         if (!firestore || !user) return;
         
         if (studentAssignmentId) {
-            // Update existing doc
             const docRef = doc(firestore, 'student-assignments', studentAssignmentId);
             updateDoc(docRef, { [field]: value })
                 .then(() => toast({ title: 'Updated!', description: `Assignment ${field} set to ${value}.`}))
@@ -254,7 +251,6 @@ function StudentView() {
                     toast({ variant: 'destructive', title: 'Error', description: 'Could not update assignment.'})
                 });
         } else {
-            // Create new doc for a status that didn't exist
             const payload = {
                 studentId: user.id,
                 assignmentId: assignmentId,
@@ -333,6 +329,7 @@ function StudentView() {
                 </TableCell>
               </TableRow>
             ))}
+             {combinedAssignments.length === 0 && <p className="text-sm text-muted-foreground p-4">No assignments found for your class.</p>}
           </TableBody>
         </Table>
       </CardContent>

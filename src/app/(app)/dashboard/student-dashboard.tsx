@@ -47,7 +47,6 @@ export default function StudentDashboard() {
   const firestore = useFirestore();
   
   const assignmentsQuery = useMemoFirebase(() => {
-        // CRITICAL: Wait for auth to be loaded and user to be present with class info.
         if (isAuthLoading || !user?.className || !user?.sectionName || !firestore) return null;
         return query(
             collection(firestore, 'assignments'), 
@@ -63,7 +62,6 @@ export default function StudentDashboard() {
     .slice(0, 3) || [];
   
   const eventsQuery = useMemoFirebase(() => {
-    // CRITICAL: Wait for auth to be loaded and user to be present.
     if (isAuthLoading || !user || !firestore) return null;
     return collection(firestore, 'events');
   }, [firestore, user, isAuthLoading]);

@@ -151,7 +151,6 @@ export default function CalendarPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const eventsQuery = useMemoFirebase(() => {
-    // CRITICAL: Wait for auth to be loaded and user to be present.
     if (isAuthLoading || !user || !firestore) return null;
     return collection(firestore, 'events');
   }, [firestore, user, isAuthLoading]);

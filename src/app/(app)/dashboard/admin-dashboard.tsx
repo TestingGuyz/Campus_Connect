@@ -71,10 +71,9 @@ const getPriorityBadge = (priority: string) => {
 
 export default function AdminDashboard() {
   const firestore = useFirestore();
-  const { user, isLoading: isAuthLoading } = useAuth(); // Use app's auth context
+  const { isLoading: isAuthLoading, user } = useAuth();
 
   const eventsQuery = useMemoFirebase(() => {
-    // CRITICAL: Wait for auth to be loaded and user to be present.
     if (isAuthLoading || !user || !firestore) return null;
     return collection(firestore, 'events');
   }, [firestore, user, isAuthLoading]);

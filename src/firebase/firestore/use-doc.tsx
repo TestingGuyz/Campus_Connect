@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useAuth } from '@/hooks/use-auth';
 
 /** Utility type to add an 'id' field to a given type T. */
 type WithId<T> = T & { id: string };
@@ -44,20 +45,20 @@ export function useDoc<T = any>(
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const { isLoading: isAuthLoading } = useAuth();
+  const [isHookLoading, setIsHookLoading] = useState<boolean>(true);
+
 
   useEffect(() => {
-    if (!memoizedDocRef) {
+    if (isAuthLoading || !memoizedDocRef) {
       setData(null);
-      setIsLoading(false);
+      setIsHookLoading(true);
       setError(null);
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-    // Optional: setData(null); // Clear previous data instantly
+    setIsHookLoading(true);
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
@@ -65,11 +66,10 @@ export function useDoc<T = any>(
         if (snapshot.exists()) {
           setData({ ...(snapshot.data() as T), id: snapshot.id });
         } else {
-          // Document does not exist
           setData(null);
         }
-        setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
-        setIsLoading(false);
+        setError(null);
+        setIsHookLoading(false);
       },
       (error: FirestoreError) => {
         const contextualError = new FirestorePermissionError({
@@ -79,15 +79,16 @@ export function useDoc<T = any>(
 
         setError(contextualError)
         setData(null)
-        setIsLoading(false)
+        setIsHookLoading(false)
 
-        // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
       }
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+  }, [memoizedDocRef, isAuthLoading]);
+
+  const isLoading = isAuthLoading || isHookLoading;
 
   return { data, isLoading, error };
 }

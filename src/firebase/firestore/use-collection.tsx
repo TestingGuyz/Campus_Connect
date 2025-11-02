@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useAuth } from '@/hooks/use-auth';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -43,7 +44,7 @@ export interface InternalQuery extends Query<DocumentData> {
  * 
  *
  * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
- * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
+ * use useMemoFirebase to memoize it per React guidence.  Also make sure that it's dependencies are stable
  * references
  *  
  * @template T Optional type for document data. Defaults to any.
@@ -58,19 +59,24 @@ export function useCollection<T = any>(
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const { isLoading: isAuthLoading } = useAuth();
+  
+  // The hook's own loading state, separate from auth loading.
+  const [isHookLoading, setIsHookLoading] = useState<boolean>(true);
+
 
   useEffect(() => {
-    if (!memoizedTargetRefOrQuery) {
+    // If auth is still loading, or if there's no query, do nothing yet.
+    if (isAuthLoading || !memoizedTargetRefOrQuery) {
       setData(null);
-      setIsLoading(false); // Set to false if there's no query
+      setIsHookLoading(true); // Remain in loading state until auth is resolved and query is provided.
       setError(null);
       return;
     }
-
-    setIsLoading(true);
-    setError(null);
+    
+    // Auth is resolved and we have a query, start the hook's loading process.
+    setIsHookLoading(true);
 
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
@@ -81,10 +87,9 @@ export function useCollection<T = any>(
         }
         setData(results);
         setError(null);
-        setIsLoading(false);
+        setIsHookLoading(false); // Data loaded successfully.
       },
       (serverError: FirestoreError) => {
-        // This logic extracts the path from either a ref or a query
         const path: string =
           memoizedTargetRefOrQuery.type === 'collection'
             ? (memoizedTargetRefOrQuery as CollectionReference).path
@@ -95,21 +100,23 @@ export function useCollection<T = any>(
           path,
         });
 
-        setError(contextualError); // Set local error state
+        setError(contextualError);
         setData(null);
-        setIsLoading(false);
+        setIsHookLoading(false); // Finished with an error.
 
-        // Emit the rich, contextual error for global handling
         errorEmitter.emit('permission-error', contextualError);
       }
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]);
+  }, [memoizedTargetRefOrQuery, isAuthLoading]); // Effect now depends on auth loading state.
   
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
   }
+  
+  // The overall loading state is true if either auth or the hook is loading.
+  const isLoading = isAuthLoading || isHookLoading;
 
   return { data, isLoading, error };
 }

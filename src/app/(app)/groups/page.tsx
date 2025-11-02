@@ -32,7 +32,6 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
 
   const messagesQuery = useMemoFirebase(
     () => {
-      // CRITICAL: Wait for auth to be loaded and user to be present.
       if (isAuthLoading || !user || !firestore) return null;
       return query(collection(firestore, `groups/${groupName}/messages`), orderBy('timestamp', 'asc'))
     },

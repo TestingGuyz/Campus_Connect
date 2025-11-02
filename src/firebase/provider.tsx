@@ -5,20 +5,25 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User as FirebaseUser, onAuthStateChanged } from 'firebase/auth'; // Renamed User to FirebaseUser
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
-import type { User } from '@/contexts/auth-context'; // Import your app's user type
 
 // Combined state for the Firebase context
 export interface FirebaseContextState {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
-  firebaseUser: FirebaseUser | null; // The raw Firebase user
-  isAuthLoading: boolean; // Renamed for clarity
-  authError: Error | null; // Renamed for clarity
 }
 
 // React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
+
+// Auth state context
+export interface AuthStateContextState {
+    firebaseUser: FirebaseUser | null;
+    isLoading: boolean;
+    error: Error | null;
+}
+export const AuthStateContext = createContext<AuthStateContextState | undefined>(undefined);
+
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -36,30 +41,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firestore,
   auth,
 }) => {
-  const [authState, setAuthState] = useState<{
-    firebaseUser: FirebaseUser | null;
-    isAuthLoading: boolean;
-    authError: Error | null;
-  }>({
+  const [authState, setAuthState] = useState<AuthStateContextState>({
     firebaseUser: null,
-    isAuthLoading: true, // Start loading until first auth event
-    authError: null,
+    isLoading: true, // Start loading until first auth event
+    error: null,
   });
 
   useEffect(() => {
-    if (!auth) {
-      setAuthState({ firebaseUser: null, isAuthLoading: false, authError: new Error("Auth service not provided.") });
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(
       auth,
       (user) => {
-        setAuthState({ firebaseUser: user, isAuthLoading: false, authError: null });
+        setAuthState({ firebaseUser: user, isLoading: false, error: null });
       },
       (error) => {
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
-        setAuthState({ firebaseUser: null, isAuthLoading: false, authError: error });
+        setAuthState({ firebaseUser: null, isLoading: false, error: error });
       }
     );
     return () => unsubscribe(); // Cleanup
@@ -69,15 +65,14 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     firebaseApp,
     firestore,
     auth,
-    firebaseUser: authState.firebaseUser,
-    isAuthLoading: authState.isAuthLoading,
-    authError: authState.authError,
-  }), [firebaseApp, firestore, auth, authState]);
+  }), [firebaseApp, firestore, auth]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
-      <FirebaseErrorListener />
-      {children}
+        <AuthStateContext.Provider value={authState}>
+            <FirebaseErrorListener />
+            {children}
+        </AuthStateContext.Provider>
     </FirebaseContext.Provider>
   );
 };
@@ -107,8 +102,11 @@ export const useFirebaseApp = (): FirebaseApp | null => useFirebaseContext().fir
  * This is useful for checking the raw authentication status directly from Firebase.
  */
 export const useFirebaseUser = () => {
-  const { firebaseUser, isAuthLoading, authError } = useFirebaseContext();
-  return { user: firebaseUser, isLoading: isAuthLoading, error: authError };
+  const context = useContext(AuthStateContext);
+  if (context === undefined) {
+    throw new Error('useFirebaseUser must be used within a FirebaseProvider');
+  }
+  return { user: context.firebaseUser, isLoading: context.isLoading, error: context.error };
 };
 
 
