@@ -55,7 +55,7 @@ function LoadingScreen() {
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [appUser, setAppUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -64,57 +64,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const storedUser = localStorage.getItem('campus-connect-user');
       if (storedUser) {
-        setAppUser(JSON.parse(storedUser));
+        setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error('Failed to parse user from localStorage', error);
       localStorage.removeItem('campus-connect-user');
     }
-    setIsAuthLoading(false); 
+    // Artificial delay to ensure all services are ready in a mock environment
+    setTimeout(() => {
+      setIsAuthLoading(false); 
+    }, 500);
   }, []);
 
   const login = useCallback((newUser: User) => {
+    setIsAuthLoading(true);
     localStorage.setItem('campus-connect-user', JSON.stringify(newUser));
-    setAppUser(newUser);
+    setUser(newUser);
     router.push('/dashboard');
+    // Ensure loading state is false after login completes
+    setTimeout(() => setIsAuthLoading(false), 100);
   }, [router]);
 
   const logout = useCallback(() => {
+    setIsAuthLoading(true);
     localStorage.removeItem('campus-connect-user');
-    setAppUser(null);
+    setUser(null);
     router.push('/login');
+     // Ensure loading state is false after logout completes
+    setTimeout(() => setIsAuthLoading(false), 100);
   }, [router]);
-
+  
   useEffect(() => {
-    if (isAuthLoading) {
-      return;
-    }
-
-    const isAuthPage = pathname === '/login';
-
-    if (appUser) {
-      if (isAuthPage) {
-        router.replace('/dashboard');
-      }
-    } else {
-      if (!isAuthPage) {
+    if (!isAuthLoading) {
+      const isAuthPage = pathname === '/login';
+      if (!user && !isAuthPage) {
         router.replace('/login');
       }
+      if (user && isAuthPage) {
+        router.replace('/dashboard');
+      }
     }
-  }, [appUser, isAuthLoading, pathname, router]);
-
-  const showLoading = isAuthLoading || (appUser && pathname === '/login') || (!appUser && pathname !== '/login');
-  
-  if (showLoading) {
-    return <LoadingScreen />;
-  }
+  }, [user, isAuthLoading, pathname, router]);
 
   const contextValue: AuthContextType = { 
-      user: appUser, 
+      user, 
       login, 
       logout, 
       isAuthLoading 
   };
+  
+  // Render a loading screen while auth state is being determined,
+  // or if we are in a redirect state.
+  if (isAuthLoading || (!user && pathname !== '/login') || (user && pathname === '/login')) {
+      return <LoadingScreen />;
+  }
 
   return (
     <AuthContext.Provider value={contextValue}>
