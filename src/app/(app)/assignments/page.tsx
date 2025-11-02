@@ -49,7 +49,7 @@ const getPriorityBadgeVariant = (priority: string) => {
 function TeacherView() {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     
     const [title, setTitle] = useState('');
     const [subject, setSubject] = useState('');
@@ -58,9 +58,9 @@ function TeacherView() {
     const [sectionId, setSectionId] = useState('');
     
     const assignmentsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || isAuthLoading || !user) return null;
         return query(collection(firestore, 'assignments'));
-    }, [firestore]);
+    }, [firestore, user, isAuthLoading]);
     const { data: assignments, isLoading } = useCollection<Assignment>(assignmentsQuery);
 
     const handleCreateAssignment = async () => {
@@ -173,26 +173,26 @@ function TeacherView() {
 }
 
 function StudentView() {
-    const { user } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
 
     // 1. Fetch assignments for the student's class
     const assignmentsQuery = useMemoFirebase(() => {
-        if (!firestore || !user?.className || !user?.sectionName) return null;
+        if (!firestore || isAuthLoading || !user?.className || !user?.sectionName) return null;
         return query(
             collection(firestore, 'assignments'), 
             where('classId', '==', user.className),
             where('sectionId', '==', user.sectionName)
         );
-    }, [firestore, user]);
+    }, [firestore, user, isAuthLoading]);
     const { data: classAssignments, isLoading: isLoadingAssignments } = useCollection<Assignment>(assignmentsQuery);
     
     // 2. Fetch student's specific assignment data (priorities, statuses)
     const studentAssignmentsQuery = useMemoFirebase(() => {
-        if(!firestore || !user) return null;
+        if(!firestore || isAuthLoading || !user) return null;
         return query(collection(firestore, 'student-assignments'), where('studentId', '==', user.id));
-    }, [firestore, user]);
+    }, [firestore, user, isAuthLoading]);
     const { data: studentAssignmentsData, isLoading: isLoadingStudentData } = useCollection<StudentAssignment>(studentAssignmentsQuery);
     
     // 3. Combine the data
