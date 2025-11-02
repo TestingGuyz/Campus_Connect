@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Paperclip, Send } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCollection } from '@/firebase';
 import { useFirestore } from '@/firebase';
 import { collection, query, orderBy, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -73,7 +73,7 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return <div className="p-6">Loading messages...</div>
   }
 
@@ -171,7 +171,7 @@ export default function GroupsPage() {
             </TabsContent>
             <TabsContent value="parents">
                 <GroupChat groupName="parents" />
-            </TabsContent>
+            </Tabs.Content>
           </Tabs>
         </CardContent>
       </Card>
