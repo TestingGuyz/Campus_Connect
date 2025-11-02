@@ -12,6 +12,8 @@ import { useCollection } from '@/firebase';
 import { useFirestore } from '@/firebase';
 import { collection, query, orderBy, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 interface ChatMessage {
   id: string;
@@ -24,13 +26,17 @@ interface ChatMessage {
 
 const GroupChat = ({ groupName }: { groupName: string }) => {
   const firestore = useFirestore();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const messagesQuery = useMemoFirebase(
-    () => firestore ? query(collection(firestore, `groups/${groupName}/messages`), orderBy('timestamp', 'asc')) : null,
-    [firestore, groupName]
+    () => {
+      // CRITICAL: Wait for auth to be loaded and user to be present.
+      if (isAuthLoading || !user || !firestore) return null;
+      return query(collection(firestore, `groups/${groupName}/messages`), orderBy('timestamp', 'asc'))
+    },
+    [firestore, groupName, user, isAuthLoading]
   );
   const { data: messages, isLoading } = useCollection<ChatMessage>(messagesQuery);
   
@@ -45,21 +51,36 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
     if (!firestore || !user || newMessage.trim() === '') return;
 
     const messagesCollection = collection(firestore, `groups/${groupName}/messages`);
-    await addDoc(messagesCollection, {
+    const messageData = {
       authorName: user.name,
       authorId: user.id,
       authorAvatarId: user.role === 'admin' ? 'admin-avatar' : (user.role === 'teacher' ? 'teacher-avatar-1' : 'student-avatar'),
       message: newMessage,
       timestamp: serverTimestamp(),
-    });
-    setNewMessage('');
+    };
+
+    try {
+        await addDoc(messagesCollection, messageData);
+        setNewMessage('');
+    } catch (error) {
+        console.error("Error sending message:", error);
+        const permissionError = new FirestorePermissionError({
+            path: `groups/${groupName}/messages`,
+            operation: 'create',
+            requestResourceData: messageData
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    }
   };
+
+  if (isLoading) {
+    return <div className="p-6">Loading messages...</div>
+  }
 
   return (
     <div className="relative h-[500px]">
       <div className="p-6 h-[calc(500px-76px)] overflow-y-auto">
         <div className="space-y-4">
-          {isLoading && <p>Loading messages...</p>}
           {messages?.map((msg) => {
             const avatar = PlaceHolderImages.find(img => img.id === msg.authorAvatarId);
             const isCurrentUser = msg.authorId === user?.id;
@@ -99,12 +120,13 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
             className="pr-24"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
+            disabled={!user}
           />
           <div className="absolute inset-y-0 right-0 flex items-center">
             <Button type="button" variant="ghost" size="icon">
               <Paperclip className="h-4 w-4" />
             </Button>
-            <Button type="submit" variant="ghost" size="icon">
+            <Button type="submit" variant="ghost" size="icon" disabled={!user || !newMessage.trim()}>
               <Send className="h-4 w-4 text-primary" />
             </Button>
           </div>
@@ -115,6 +137,20 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
 };
 
 export default function GroupsPage() {
+    const { user, isLoading } = useAuth();
+
+    if(isLoading) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-2xl font-headline font-bold">Interactive Groups</h1>
+                    <p className="text-muted-foreground">Loading...</p>
+                </div>
+                <Card><CardContent className="p-6">Loading groups...</CardContent></Card>
+            </div>
+        );
+    }
+
   return (
     <div className="space-y-6">
        <div>
@@ -142,4 +178,3 @@ export default function GroupsPage() {
     </div>
   );
 }
-    

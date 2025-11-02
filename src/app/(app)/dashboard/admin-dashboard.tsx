@@ -19,9 +19,10 @@ import {
 } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import type { ChartConfig } from '@/components/ui/chart';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/use-auth';
 
 const chartData = [
   { month: "January", attendance: 186, assignments: 80 },
@@ -70,12 +71,14 @@ const getPriorityBadge = (priority: string) => {
 
 export default function AdminDashboard() {
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
+  const { user, isLoading: isAuthLoading } = useAuth(); // Use app's auth context
 
   const eventsQuery = useMemoFirebase(() => {
-    if (!firestore || isUserLoading || !user) return null;
+    // CRITICAL: Wait for auth to be loaded and user to be present.
+    if (isAuthLoading || !user || !firestore) return null;
     return collection(firestore, 'events');
-  }, [firestore, user, isUserLoading]);
+  }, [firestore, user, isAuthLoading]);
+
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
 
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
@@ -122,7 +125,7 @@ export default function AdminDashboard() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{events?.length || 0}</div>
+            <div className="text-2xl font-bold">+{isLoadingEvents ? '...' : (events?.length || 0)}</div>
             <p className="text-xs text-muted-foreground">
               in total
             </p>
@@ -179,7 +182,7 @@ export default function AdminDashboard() {
                 <CardDescription>Urgent upcoming events and deadlines.</CardDescription>
             </CardHeader>
             <CardContent>
-                {isLoadingEvents || isUserLoading ? <p>Loading events...</p> : (
+                {isLoadingEvents || isAuthLoading ? <p>Loading events...</p> : (
                     <ul className="space-y-3">
                         {highPriorityEvents.map(event => (
                             <li key={event.id} className="flex items-center justify-between text-sm">

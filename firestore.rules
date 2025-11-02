@@ -3,85 +3,109 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // --- Helper Functions ---
+
+    // Returns true if the user is signed in.
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Returns true if the user's UID exists in the /admins collection.
+    // This is our definition of an "Admin" user.
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Returns true if the user's UID exists in the /teachers collection.
+    function isTeacher() {
+      return isSignedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+    }
+
+    // Returns true if the user is trying to access their own document.
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Admins have a document in the /admins collection with their UID.
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    
-    // Teachers have a document in the /teachers collection with their UID.
-    function isTeacher() {
-      return isSignedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
-    }
-    
-    // A teacher assigned to the specific class and section.
+    // Returns true if a teacher is assigned to the specified class.
     function isTeacherForClass(classId) {
       return isTeacher() && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.classIds.hasAny([classId]);
     }
-    
+
+    // Returns true if a teacher is assigned to the specified section.
     function isTeacherForSection(sectionId) {
-        return isTeacher() && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.sectionIds.hasAny([sectionId]);
-    }
-
-    // Unauthenticated users can query for users to verify credentials before login.
-    match /{path=**}/students/{studentId} {
-        allow read: if true;
-        allow write: if isAdmin() || isTeacherForClass(path[1]) && isTeacherForSection(path[3]);
+      return isTeacher() && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.sectionIds.hasAny([sectionId]);
     }
     
-    match /classes/{classId} {
-      allow read: if true; // All users can read class info
-      allow write: if isAdmin();
-      
-      match /sections/{sectionId} {
-        allow read: if true; // All users can read section info
-        allow write: if isAdmin();
-
-        // Students can be read by admins or teachers of that class.
-        // Students can only be written by admins or assigned teachers.
-        match /students/{studentId} {
-            allow read: if isAdmin() || isTeacherForClass(classId);
-            allow write: if isAdmin() || isTeacherForClass(classId) && isTeacherForSection(sectionId);
-        }
-      }
+    // Returns true if the user is a student in the document path.
+    // This is not a global role but contextual to the student's record.
+    function isStudent(studentId) {
+      return isOwner(studentId);
     }
 
-    // Admins can manage other admins and teachers.
+    // --- Collection Rules ---
+
+    // Admins have full read/write access everywhere.
+    match /{path=**} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Admins collection can only be read or written by other admins.
     match /admins/{userId} {
       allow read, write: if isAdmin();
     }
     
-    match /teachers/{userId} {
-      allow read: if isAdmin() || isOwner(userId);
+    // Teachers collection: Admins can manage them. Teachers can read their own profile.
+    match /teachers/{teacherId} {
+      allow read: if isAdmin() || isOwner(teacherId);
       allow write: if isAdmin();
     }
 
-    // Assignments can be read by assigned teachers/students, created/deleted by teachers/admins.
+    match /classes/{classId} {
+      // Teachers and Admins can read class/section info.
+      allow read: if isTeacher() || isAdmin();
+      allow write: if isAdmin(); // Only admins can create/edit classes.
+      
+      match /sections/{sectionId} {
+        allow read: if isTeacher() || isAdmin();
+        allow write: if isAdmin(); // Only admins can create/edit sections.
+
+        // Students: Teachers of the class can manage them. Students can read their own data.
+        match /students/{studentId} {
+            allow read: if isTeacherForClass(classId) || isStudent(studentId) || isAdmin();
+            allow write: if isTeacherForClass(classId) && isTeacherForSection(sectionId) || isAdmin();
+        }
+
+        // Timetable for a section can be read by teachers of that section and students of that section.
+        match /timetable/{weekId} {
+            // This is tricky without knowing the student's section directly from auth claims.
+            // A more secure app would use custom claims. For now, we allow any signed-in user.
+            allow read: if isSignedIn();
+            allow write: if isTeacherForClass(classId) && isTeacherForSection(sectionId) || isAdmin();
+        }
+      }
+    }
+
+    // Assignments can be created/updated by teachers, and read by any authenticated user.
     match /assignments/{assignmentId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isAdmin() || isTeacher();
+      allow create, update, delete: if isTeacher() || isAdmin();
     }
 
-    // Student-specific assignment data can only be accessed by the student themselves.
+    // Student's specific assignment data (status, priority) can only be accessed by the student themselves.
     match /student-assignments/{studentAssignmentId} {
-        allow read, write: if isSignedIn() && request.auth.uid == resource.data.studentId;
+        allow read, write: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+        // Allow creation if the user is the student for that assignment
+        allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
     }
     
-    // Group messages can be read by any signed in user, but only created by them.
+    // Group messages can be read by any signed-in user.
+    // Messages can only be created by the author.
     match /groups/{groupId}/messages/{messageId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.authorId;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
     }
 
-    // Events can be read by anyone signed in, but only created by admins.
+    // Events can be read by anyone signed in, but only created/managed by admins.
     match /events/{eventId} {
       allow read: if isSignedIn();
       allow create, update, delete: if isAdmin();

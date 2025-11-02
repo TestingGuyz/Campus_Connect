@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 type SchoolEvent = {
   id: string;
@@ -56,19 +58,26 @@ function AddEventModal({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (ope
             return;
         }
         setIsSubmitting(true);
+        const eventData = {
+            title,
+            date,
+            type,
+            priority,
+            createdAt: serverTimestamp(),
+        };
         try {
-            await addDoc(collection(firestore, 'events'), {
-                title,
-                date,
-                type,
-                priority,
-                createdAt: serverTimestamp(),
-            });
+            await addDoc(collection(firestore, 'events'), eventData);
             toast({ title: 'Success', description: 'Event added to the calendar.' });
             setIsOpen(false);
             setTitle(''); setDate(''); setType('other'); setPriority('Medium');
         } catch (error) {
             console.error('Error adding event: ', error);
+            const permissionError = new FirestorePermissionError({
+                path: 'events',
+                operation: 'create',
+                requestResourceData: eventData
+            });
+            errorEmitter.emit('permission-error', permissionError);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not add event.' });
         } finally {
             setIsSubmitting(false);
@@ -142,9 +151,11 @@ export default function CalendarPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const eventsQuery = useMemoFirebase(() => {
-    if (!firestore || isAuthLoading || !user) return null;
+    // CRITICAL: Wait for auth to be loaded and user to be present.
+    if (isAuthLoading || !user || !firestore) return null;
     return collection(firestore, 'events');
   }, [firestore, user, isAuthLoading]);
+  
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
 
   const sortedEvents = events?.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

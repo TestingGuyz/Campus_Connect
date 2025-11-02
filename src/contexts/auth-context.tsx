@@ -4,7 +4,7 @@ import { createContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
-import { useUser as useFirebaseUser } from '@/firebase'; // Import the firebase user hook
+import { useFirebaseUser } from '@/firebase/provider'; // Updated import
 
 export type User = {
   id: string;
@@ -16,10 +16,10 @@ export type User = {
 };
 
 export type AuthContextType = {
-  user: User | null;
+  user: User | null; // This is your application-specific user profile
   login: (user: User) => void;
   logout: () => void;
-  isLoading: boolean;
+  isLoading: boolean; // This combines multiple loading states
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,19 +60,19 @@ function LoadingScreen() {
     );
 }
 
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAppLoading, setIsAppLoading] = useState(true);
-  const { isUserLoading: isFirebaseUserLoading } = useFirebaseUser();
+  const [appUser, setAppUser] = useState<User | null>(null);
+  const [isAppLoading, setIsAppLoading] = useState(true); // For loading the user profile from localStorage
+  const { isLoading: isAuthLoading } = useFirebaseUser(); // Firebase's auth loading state
   const router = useRouter();
   const pathname = usePathname();
 
+  // On initial load, try to get user profile from localStorage
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('campus-connect-user');
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        setAppUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error('Failed to parse user from localStorage', error);
@@ -82,36 +82,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const isLoading = isAppLoading || isFirebaseUserLoading;
+  // This is the single source of truth for loading state across the app
+  const isLoading = isAppLoading || isAuthLoading;
 
+  // This effect handles routing based on auth state
   useEffect(() => {
-    if (!isLoading && !user && pathname !== '/login') {
-      router.push('/login');
+    // If loading is finished and there's no user, redirect to login (unless already there)
+    if (!isLoading && !appUser && pathname !== '/login') {
+      router.replace('/login');
     }
-    if (!isLoading && user && pathname === '/login') {
-      router.push('/dashboard');
+    // If loading is finished and there IS a user, redirect to dashboard if they are on the login page
+    if (!isLoading && appUser && pathname === '/login') {
+      router.replace('/dashboard');
     }
-  }, [user, isLoading, pathname, router]);
-
+  }, [appUser, isLoading, pathname, router]);
 
   const login = (newUser: User) => {
     localStorage.setItem('campus-connect-user', JSON.stringify(newUser));
-    setUser(newUser);
+    setAppUser(newUser);
     router.push('/dashboard');
   };
 
   const logout = () => {
     localStorage.removeItem('campus-connect-user');
-    setUser(null);
+    setAppUser(null);
     router.push('/login');
   };
   
+  // Show loading screen only if we are in a loading state AND not on the login page.
+  // The login page has its own UI and shouldn't be replaced by a loading screen.
   if (isLoading && pathname !== '/login') {
     return <LoadingScreen />;
   }
 
+  // If we are done loading and there is no user, but we are still rendering children (e.g. on the login page),
+  // we pass the null user value to the context.
+  const contextValue = { user: appUser, login, logout, isLoading };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

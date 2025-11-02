@@ -61,7 +61,8 @@ function TeacherView() {
     const [sectionId, setSectionId] = useState('');
     
     const assignmentsQuery = useMemoFirebase(() => {
-        if (!firestore || isAuthLoading || !user) return null;
+        // CRITICAL: Wait for auth to be loaded and user to be present.
+        if (isAuthLoading || !user || !firestore) return null;
         return query(collection(firestore, 'assignments'));
     }, [firestore, user, isAuthLoading]);
 
@@ -195,7 +196,8 @@ function StudentView() {
 
     // 1. Fetch assignments for the student's class
     const assignmentsQuery = useMemoFirebase(() => {
-        if (!firestore || isAuthLoading || !user?.className || !user?.sectionName) return null;
+        // CRITICAL: Wait for auth to be loaded and user to have class info.
+        if (isAuthLoading || !user?.className || !user?.sectionName || !firestore) return null;
         return query(
             collection(firestore, 'assignments'), 
             where('classId', '==', user.className),
@@ -206,7 +208,8 @@ function StudentView() {
     
     // 2. Fetch student's specific assignment data (priorities, statuses)
     const studentAssignmentsQuery = useMemoFirebase(() => {
-        if(!firestore || isAuthLoading || !user) return null;
+        // CRITICAL: Wait for auth to be loaded and user to be present.
+        if(isAuthLoading || !user || !firestore) return null;
         return query(collection(firestore, 'student-assignments'), where('studentId', '==', user.id));
     }, [firestore, user, isAuthLoading]);
     const { data: studentAssignmentsData, isLoading: isLoadingStudentData } = useCollection<StudentAssignment>(studentAssignmentsQuery);
@@ -233,13 +236,6 @@ function StudentView() {
     const handleStudentAssignmentChange = (assignmentId: string, studentAssignmentId: string | undefined, field: 'status' | 'priority', value: string) => {
         if (!firestore || !user) return;
         
-        const payload = {
-            studentId: user.id,
-            assignmentId: assignmentId,
-            status: field === 'status' ? value : 'Not Started',
-            priority: field === 'priority' ? value : 'Medium',
-        };
-        
         if (studentAssignmentId) {
             // Update existing doc
             const docRef = doc(firestore, 'student-assignments', studentAssignmentId);
@@ -256,7 +252,13 @@ function StudentView() {
                     toast({ variant: 'destructive', title: 'Error', description: 'Could not update assignment.'})
                 });
         } else {
-            // Create new doc
+            // Create new doc for a status that didn't exist
+            const payload = {
+                studentId: user.id,
+                assignmentId: assignmentId,
+                status: field === 'status' ? value as StudentAssignment['status'] : 'Not Started',
+                priority: field === 'priority' ? value as StudentAssignment['priority'] : 'Medium',
+            };
             addDoc(collection(firestore, 'student-assignments'), payload)
                 .then(() => toast({ title: 'Updated!', description: `Assignment ${field} set to ${value}.`}))
                 .catch(error => {
@@ -273,7 +275,7 @@ function StudentView() {
     }
 
 
-  if (isLoadingAssignments || isLoadingStudentData) {
+  if (isLoadingAssignments || isLoadingStudentData || isAuthLoading) {
       return <Card><CardContent className="p-6">Loading assignments...</CardContent></Card>
   }
 

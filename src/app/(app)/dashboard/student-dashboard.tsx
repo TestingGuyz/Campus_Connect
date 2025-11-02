@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, BookCheck, BookMarked, CalendarCheck, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 const upcomingClasses = [
@@ -43,27 +43,30 @@ const getPriorityBadge = (priority: string) => {
 
 
 export default function StudentDashboard() {
-  const { user: authUser, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const firestore = useFirestore();
   
   const assignmentsQuery = useMemoFirebase(() => {
-        if (!firestore || isAuthLoading || !authUser?.className || !authUser?.sectionName) return null;
+        // CRITICAL: Wait for auth to be loaded and user to be present with class info.
+        if (isAuthLoading || !user?.className || !user?.sectionName || !firestore) return null;
         return query(
             collection(firestore, 'assignments'), 
-            where('classId', '==', authUser.className),
-            where('sectionId', '==', authUser.sectionName)
+            where('classId', '==', user.className),
+            where('sectionId', '==', user.sectionName)
         );
-    }, [firestore, authUser, isAuthLoading]);
+    }, [firestore, user, isAuthLoading]);
   const { data: assignments, isLoading: isLoadingAssignments } = useCollection<Assignment>(assignmentsQuery);
+  
   const upcomingAssignments = assignments
     ?.filter(a => new Date(a.dueDate) >= new Date())
     .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .slice(0, 3) || [];
   
   const eventsQuery = useMemoFirebase(() => {
-    if (!firestore || isAuthLoading || !authUser) return null;
+    // CRITICAL: Wait for auth to be loaded and user to be present.
+    if (isAuthLoading || !user || !firestore) return null;
     return collection(firestore, 'events');
-  }, [firestore, authUser, isAuthLoading]);
+  }, [firestore, user, isAuthLoading]);
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
 
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
@@ -74,7 +77,7 @@ export default function StudentDashboard() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold font-headline">Welcome back, {authUser?.name.split(' ')[0]}!</h1>
+        <h1 className="text-3xl font-bold font-headline">Welcome back, {user?.name.split(' ')[0]}!</h1>
         <p className="text-muted-foreground">Here's your summary for today.</p>
       </div>
 
