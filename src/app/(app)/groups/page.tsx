@@ -171,7 +171,7 @@ export default function GroupsPage() {
             </TabsContent>
             <TabsContent value="parents">
                 <GroupChat groupName="parents" />
-            </Tabs.Content>
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
