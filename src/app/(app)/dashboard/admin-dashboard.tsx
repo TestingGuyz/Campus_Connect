@@ -71,7 +71,7 @@ const getPriorityBadge = (priority: string) => {
 
 export default function AdminDashboard() {
   const firestore = useFirestore();
-  const { isLoading: isAuthLoading, user } = useAuth();
+  const { isAuthLoading, user } = useAuth();
 
   const eventsQuery = useMemoFirebase(() => {
     if (isAuthLoading || !user || !firestore) return null;
@@ -83,6 +83,8 @@ export default function AdminDashboard() {
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
                                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                    .slice(0, 5) || [];
+
+  const isLoading = isAuthLoading || isLoadingEvents;
 
   return (
     <div className="flex flex-col gap-6">
@@ -124,7 +126,7 @@ export default function AdminDashboard() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{isLoadingEvents ? '...' : (events?.length || 0)}</div>
+            <div className="text-2xl font-bold">+{isLoading ? '...' : (events?.length || 0)}</div>
             <p className="text-xs text-muted-foreground">
               in total
             </p>
@@ -181,7 +183,7 @@ export default function AdminDashboard() {
                 <CardDescription>Urgent upcoming events and deadlines.</CardDescription>
             </CardHeader>
             <CardContent>
-                {isLoadingEvents || isAuthLoading ? <p>Loading events...</p> : (
+                {isLoading ? <p>Loading events...</p> : (
                     <ul className="space-y-3">
                         {highPriorityEvents.map(event => (
                             <li key={event.id} className="flex items-center justify-between text-sm">

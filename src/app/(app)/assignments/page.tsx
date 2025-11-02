@@ -52,7 +52,7 @@ const getPriorityBadgeVariant = (priority: string) => {
 function TeacherView() {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const { user, isLoading: isAuthLoading } = useAuth();
+    const { user, isAuthLoading } = useAuth();
     
     const [title, setTitle] = useState('');
     const [subject, setSubject] = useState('');
@@ -195,7 +195,7 @@ function TeacherView() {
 }
 
 function StudentView() {
-    const { user, isLoading: isAuthLoading } = useAuth();
+    const { user, isAuthLoading } = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
 
@@ -338,9 +338,9 @@ function StudentView() {
 }
 
 export default function AssignmentsPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isAuthLoading } = useAuth();
   
-  if (isLoading) {
+  if (isAuthLoading) {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">

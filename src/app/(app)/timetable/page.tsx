@@ -55,21 +55,22 @@ const LoadingSkeleton = () => (
 );
 
 export default function TimetablePage() {
-    const { user } = useAuth();
+    const { user, isAuthLoading } = useAuth();
     const firestore = useFirestore();
     const [timetable, setTimetable] = useState<TimetableData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchTimetable = async () => {
-            if (!firestore || !user || user.role !== 'student' || !user.className || !user.sectionName) {
-                // For admin/teacher or if data is missing, load a default/empty state or a specific timetable.
-                // For this example, we'll just stop loading.
-                setIsLoading(false);
+            if (isAuthLoading || !firestore || !user) {
+                setIsLoading(true);
                 return;
             };
+            if (user.role !== 'student' || !user.className || !user.sectionName) {
+                setIsLoading(false);
+                return;
+            }
 
-            setIsLoading(true);
             try {
                 const timetableCollectionRef = collection(firestore, `classes/${user.className}/sections/${user.sectionName}/timetable`);
                 const timetableSnapshot = await getDocs(timetableCollectionRef);
@@ -90,7 +91,7 @@ export default function TimetablePage() {
         };
 
         fetchTimetable();
-    }, [user, firestore]);
+    }, [user, firestore, isAuthLoading]);
 
   const timeSlots = timetable ? Object.keys(timetable).sort() : [];
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -137,7 +138,7 @@ export default function TimetablePage() {
         </Card>
       ) : (
         <Card>
-            <CardContent className="pt-6 text-center">
+            <CardContent className="pt-6 text-center text-muted-foreground">
                 <p>No timetable available for your class and section.</p>
             </CardContent>
         </Card>

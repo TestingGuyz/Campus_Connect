@@ -145,7 +145,7 @@ function AddEventModal({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (ope
 
 
 export default function CalendarPage() {
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthLoading } = useAuth();
   const firestore = useFirestore();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -159,6 +159,8 @@ export default function CalendarPage() {
 
   const sortedEvents = events?.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const upcomingEvents = sortedEvents?.filter(e => new Date(e.date) >= new Date()) || [];
+
+  const isLoading = isAuthLoading || isLoadingEvents;
 
   return (
     <div className="space-y-6">
@@ -201,8 +203,8 @@ export default function CalendarPage() {
             <CardDescription>A list of important dates and events.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isLoadingEvents && <p>Loading events...</p>}
-            {upcomingEvents.map((event) => (
+            {isLoading && <p>Loading events...</p>}
+            {!isLoading && upcomingEvents.map((event) => (
               <div key={event.id} className="flex items-start gap-4">
                 <div className="flex flex-col items-center justify-center bg-muted text-muted-foreground rounded-md h-12 w-12 shrink-0">
                     <span className="text-xs font-bold uppercase">{new Date(event.date + 'T00:00:00').toLocaleString('default', { month: 'short' })}</span>
@@ -217,7 +219,7 @@ export default function CalendarPage() {
                 </div>
               </div>
             ))}
-            {upcomingEvents.length === 0 && !isLoadingEvents && <p className="text-sm text-muted-foreground">No upcoming events.</p>}
+            {upcomingEvents.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No upcoming events.</p>}
           </CardContent>
         </Card>
       </div>

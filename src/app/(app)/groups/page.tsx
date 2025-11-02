@@ -26,7 +26,7 @@ interface ChatMessage {
 
 const GroupChat = ({ groupName }: { groupName: string }) => {
   const firestore = useFirestore();
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthLoading } = useAuth();
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -136,9 +136,9 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
 };
 
 export default function GroupsPage() {
-    const { user, isLoading } = useAuth();
+    const { user, isAuthLoading } = useAuth();
 
-    if(isLoading) {
+    if(isAuthLoading) {
         return (
             <div className="space-y-6">
                 <div>
