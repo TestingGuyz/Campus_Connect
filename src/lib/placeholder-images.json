@@ -1,3 +1,46 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "admin-avatar",
+      "description": "Avatar for an admin user",
+      "imageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d29tYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjIwMzAxODl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman portrait"
+    },
+    {
+      "id": "student-avatar",
+      "description": "Avatar for a student user",
+      "imageUrl": "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxtYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjE5OTU4ODd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man portrait"
+    },
+    {
+      "id": "teacher-avatar-1",
+      "description": "Avatar for teacher 1",
+      "imageUrl": "https://images.unsplash.com/photo-1557862921-37829c790f19?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtYW4lMjB0ZWFjaGVyfGVufDB8fHx8MTc2MjAxNTYwOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man teacher"
+    },
+    {
+      "id": "teacher-avatar-2",
+      "description": "Avatar for teacher 2",
+      "imageUrl": "https://images.unsplash.com/photo-1739258845014-30fb89b98a46?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx3b21hbiUyMHRlYWNoZXJ8ZW58MHx8fHwxNzYyMDk5OTY0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman teacher"
+    },
+    {
+      "id": "parent-avatar-1",
+      "description": "Avatar for parent 1",
+      "imageUrl": "https://images.unsplash.com/photo-1738178845302-21cde5a7c2c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtYW4lMjBjYXN1YWx8ZW58MHx8fHwxNzYyMDU3MTQ3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man casual"
+    },
+    {
+      "id": "parent-avatar-2",
+      "description": "Avatar for parent 2",
+      "imageUrl": "https://images.unsplash.com/photo-1607664919376-626f7c3afe97?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx3b21hbiUyMGNhc3VhbHxlbnwwfHx8fDE3NjIwNjA5OTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman casual"
+    },
+    {
+      "id": "profile-banner",
+      "description": "Banner image for a user profile",
+      "imageUrl": "https://images.unsplash.com/photo-1592280771190-3e2e4d571952?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx1bml2ZXJzaXR5JTIwY2FtcHVzfGVufDB8fHx8MTc2MjAxNTA3OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "university campus"
+    }
+  ]
 }
