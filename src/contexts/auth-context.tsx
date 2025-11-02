@@ -4,6 +4,7 @@ import { createContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
+import { useUser as useFirebaseUser } from '@/firebase'; // Import the firebase user hook
 
 export type User = {
   id: string;
@@ -62,7 +63,8 @@ function LoadingScreen() {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAppLoading, setIsAppLoading] = useState(true);
+  const { isUserLoading: isFirebaseUserLoading } = useFirebaseUser();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -76,10 +78,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Failed to parse user from localStorage', error);
       localStorage.removeItem('campus-connect-user');
     } finally {
-      // Simulate a longer loading time to see the loading screen
-      setTimeout(() => setIsLoading(false), 1500);
+      setIsAppLoading(false);
     }
   }, []);
+
+  const isLoading = isAppLoading || isFirebaseUserLoading;
 
   useEffect(() => {
     if (!isLoading && !user && pathname !== '/login') {
@@ -103,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
   
-  if (isLoading) {
+  if (isLoading && pathname !== '/login') {
     return <LoadingScreen />;
   }
 

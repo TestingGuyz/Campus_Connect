@@ -15,6 +15,9 @@ import { useMemoFirebase } from '@/firebase/provider';
 import { collection, query, where, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 // Types to match Firestore data model
 type Assignment = {
@@ -61,41 +64,54 @@ function TeacherView() {
         if (!firestore || isAuthLoading || !user) return null;
         return query(collection(firestore, 'assignments'));
     }, [firestore, user, isAuthLoading]);
+
     const { data: assignments, isLoading } = useCollection<Assignment>(assignmentsQuery);
 
-    const handleCreateAssignment = async () => {
+    const handleCreateAssignment = () => {
         if (!firestore || !title || !subject || !dueDate || !classId || !sectionId) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields.' });
             return;
         }
 
-        try {
-            await addDoc(collection(firestore, 'assignments'), {
-                title,
-                subject,
-                dueDate,
-                classId,
-                sectionId,
-                createdAt: serverTimestamp(),
-            });
+        addDoc(collection(firestore, 'assignments'), {
+            title,
+            subject,
+            dueDate,
+            classId,
+            sectionId,
+            createdAt: serverTimestamp(),
+        }).then(() => {
             toast({ title: 'Success', description: 'Assignment created successfully.' });
             // Reset form
             setTitle(''); setSubject(''); setDueDate(''); setClassId(''); setSectionId('');
-        } catch (error) {
+        }).catch(error => {
             console.error(error);
+            const permissionError = new FirestorePermissionError({
+                path: 'assignments',
+                operation: 'create',
+                requestResourceData: { title, subject, dueDate, classId, sectionId }
+            });
+            errorEmitter.emit('permission-error', permissionError);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not create assignment.' });
-        }
+        });
     };
 
-    const handleDeleteAssignment = async (assignmentId: string) => {
+    const handleDeleteAssignment = (assignmentId: string) => {
         if (!firestore) return;
-        try {
-            await deleteDoc(doc(firestore, 'assignments', assignmentId));
-            toast({ title: 'Success', description: 'Assignment deleted.' });
-        } catch (error) {
-            console.error(error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not delete assignment.' });
-        }
+        
+        deleteDoc(doc(firestore, 'assignments', assignmentId))
+            .then(() => {
+                toast({ title: 'Success', description: 'Assignment deleted.' });
+            })
+            .catch(error => {
+                console.error(error);
+                const permissionError = new FirestorePermissionError({
+                    path: `assignments/${assignmentId}`,
+                    operation: 'delete',
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not delete assignment.' });
+            });
     }
 
   return (
@@ -214,27 +230,45 @@ function StudentView() {
     }, [classAssignments, studentAssignmentsData]);
 
 
-    const handleStudentAssignmentChange = async (assignmentId: string, studentAssignmentId: string | undefined, field: 'status' | 'priority', value: string) => {
+    const handleStudentAssignmentChange = (assignmentId: string, studentAssignmentId: string | undefined, field: 'status' | 'priority', value: string) => {
         if (!firestore || !user) return;
         
-        try {
-            if (studentAssignmentId) {
-                // Update existing doc
-                const docRef = doc(firestore, 'student-assignments', studentAssignmentId);
-                await updateDoc(docRef, { [field]: value });
-            } else {
-                // Create new doc
-                await addDoc(collection(firestore, 'student-assignments'), {
-                    studentId: user.id,
-                    assignmentId: assignmentId,
-                    status: field === 'status' ? value : 'Not Started',
-                    priority: field === 'priority' ? value : 'Medium',
+        const payload = {
+            studentId: user.id,
+            assignmentId: assignmentId,
+            status: field === 'status' ? value : 'Not Started',
+            priority: field === 'priority' ? value : 'Medium',
+        };
+        
+        if (studentAssignmentId) {
+            // Update existing doc
+            const docRef = doc(firestore, 'student-assignments', studentAssignmentId);
+            updateDoc(docRef, { [field]: value })
+                .then(() => toast({ title: 'Updated!', description: `Assignment ${field} set to ${value}.`}))
+                .catch(error => {
+                    console.error("Failed to update assignment", error);
+                    const permissionError = new FirestorePermissionError({
+                        path: `student-assignments/${studentAssignmentId}`,
+                        operation: 'update',
+                        requestResourceData: { [field]: value }
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                    toast({ variant: 'destructive', title: 'Error', description: 'Could not update assignment.'})
                 });
-            }
-            toast({ title: 'Updated!', description: `Assignment ${field} set to ${value}.`})
-        } catch (error) {
-            console.error("Failed to update assignment", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not update assignment.'})
+        } else {
+            // Create new doc
+            addDoc(collection(firestore, 'student-assignments'), payload)
+                .then(() => toast({ title: 'Updated!', description: `Assignment ${field} set to ${value}.`}))
+                .catch(error => {
+                    console.error("Failed to create assignment data", error);
+                    const permissionError = new FirestorePermissionError({
+                        path: 'student-assignments',
+                        operation: 'create',
+                        requestResourceData: payload
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                    toast({ variant: 'destructive', title: 'Error', description: 'Could not update assignment.'})
+                });
         }
     }
 
@@ -303,9 +337,24 @@ function StudentView() {
 }
 
 export default function AssignmentsPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   
-  // Render teacher view for both admin and teacher roles
+  if (isLoading) {
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                <h1 className="text-2xl font-headline font-bold">Assignments</h1>
+                <p className="text-muted-foreground">Loading...</p>
+                </div>
+            </div>
+            <Card>
+                <CardContent className="p-6">Loading assignments...</CardContent>
+            </Card>
+        </div>
+    );
+  }
+
   const canManageAssignments = user?.role === 'admin' || user?.role === 'teacher';
 
   return (
