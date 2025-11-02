@@ -43,11 +43,11 @@ const getPriorityBadge = (priority: string) => {
 
 
 export default function StudentDashboard() {
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthLoading } = useAuth();
   const firestore = useFirestore();
-
+  
   const assignmentsQuery = useMemoFirebase(() => {
-        if (!firestore || isAuthLoading || !user?.className || !user?.sectionName) return null;
+        if (isAuthLoading || !user?.className || !user?.sectionName || !firestore) return null;
         return query(
             collection(firestore, 'assignments'), 
             where('classId', '==', user.className),
@@ -55,21 +55,23 @@ export default function StudentDashboard() {
         );
     }, [firestore, user, isAuthLoading]);
   const { data: assignments, isLoading: isLoadingAssignments } = useCollection<Assignment>(assignmentsQuery);
+  
+  const eventsQuery = useMemoFirebase(() => {
+    if (isAuthLoading || !user || !firestore) return null;
+    return collection(firestore, 'events');
+  }, [firestore, user, isAuthLoading]);
+  const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
+
+  const isLoading = isAuthLoading || isLoadingAssignments || isLoadingEvents;
+  
   const upcomingAssignments = assignments
     ?.filter(a => new Date(a.dueDate) >= new Date())
     .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .slice(0, 3) || [];
   
-  const eventsQuery = useMemoFirebase(() => {
-    if (!firestore || isAuthLoading || !user) return null;
-    return collection(firestore, 'events');
-  }, [firestore, user, isAuthLoading]);
-  const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
-
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
                                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                    .slice(0, 3) || [];
-
 
   return (
     <div className="flex flex-col gap-6">
@@ -151,7 +153,7 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                {isLoadingAssignments || isAuthLoading ? <p>Loading assignments...</p> : upcomingAssignments.map((a) => (
+                {isLoading ? <p>Loading assignments...</p> : upcomingAssignments.map((a) => (
                     <div key={a.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg bg-muted/50">
                         <div>
                             <p className="font-semibold">{a.title}</p>
@@ -163,7 +165,7 @@ export default function StudentDashboard() {
                         </div>
                     </div>
                 ))}
-                 {upcomingAssignments.length === 0 && !isLoadingAssignments && !isAuthLoading && <p className="text-sm text-muted-foreground">No upcoming assignments.</p>}
+                 {upcomingAssignments.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No upcoming assignments.</p>}
                 </div>
                 <Button variant="outline" className="mt-6 w-full" asChild>
                     <Link href="/assignments">View All Assignments <ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -179,7 +181,7 @@ export default function StudentDashboard() {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                 {isLoadingEvents || isAuthLoading ? <p>Loading events...</p> : (
+                 {isLoading ? <p>Loading events...</p> : (
                     <ul className="space-y-3">
                         {highPriorityEvents.map(event => (
                             <li key={event.id} className="flex items-center justify-between text-sm">
@@ -190,7 +192,7 @@ export default function StudentDashboard() {
                                 <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
                             </li>
                         ))}
-                         {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events.</p>}
+                         {highPriorityEvents.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No high-priority events.</p>}
                     </ul>
                 )}
                  <Button variant="outline" className="mt-6 w-full" asChild>
