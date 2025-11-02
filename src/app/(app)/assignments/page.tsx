@@ -74,14 +74,16 @@ function TeacherView() {
             return;
         }
 
-        addDoc(collection(firestore, 'assignments'), {
+        const assignmentData = {
             title,
             subject,
             dueDate,
             classId,
             sectionId,
             createdAt: serverTimestamp(),
-        }).then(() => {
+        };
+
+        addDoc(collection(firestore, 'assignments'), assignmentData).then(() => {
             toast({ title: 'Success', description: 'Assignment created successfully.' });
             // Reset form
             setTitle(''); setSubject(''); setDueDate(''); setClassId(''); setSectionId('');
@@ -90,7 +92,7 @@ function TeacherView() {
             const permissionError = new FirestorePermissionError({
                 path: 'assignments',
                 operation: 'create',
-                requestResourceData: { title, subject, dueDate, classId, sectionId }
+                requestResourceData: assignmentData
             });
             errorEmitter.emit('permission-error', permissionError);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not create assignment.' });
