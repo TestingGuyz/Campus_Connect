@@ -73,6 +73,18 @@ export default function StudentDashboard() {
                                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                    .slice(0, 3) || [];
 
+  if (isLoading) {
+    return (
+        <div className="flex flex-col gap-6">
+            <div>
+                <h1 className="text-3xl font-bold font-headline">Welcome back...</h1>
+                <p className="text-muted-foreground">Loading your summary...</p>
+            </div>
+             <Card><CardContent className="p-6">Loading dashboard...</CardContent></Card>
+        </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -153,7 +165,7 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                {isLoading ? <p>Loading assignments...</p> : upcomingAssignments.map((a) => (
+                {upcomingAssignments.map((a) => (
                     <div key={a.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg bg-muted/50">
                         <div>
                             <p className="font-semibold">{a.title}</p>
@@ -165,7 +177,7 @@ export default function StudentDashboard() {
                         </div>
                     </div>
                 ))}
-                 {upcomingAssignments.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No upcoming assignments.</p>}
+                 {upcomingAssignments.length === 0 && <p className="text-sm text-muted-foreground">No upcoming assignments.</p>}
                 </div>
                 <Button variant="outline" className="mt-6 w-full" asChild>
                     <Link href="/assignments">View All Assignments <ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -181,20 +193,18 @@ export default function StudentDashboard() {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                 {isLoading ? <p>Loading events...</p> : (
-                    <ul className="space-y-3">
-                        {highPriorityEvents.map(event => (
-                            <li key={event.id} className="flex items-center justify-between text-sm">
-                                <div>
-                                    <p className="font-medium">{event.title}</p>
-                                    <p className="text-xs text-muted-foreground">{new Date(event.date + 'T00:00:00').toLocaleDateString()}</p>
-                                </div>
-                                <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
-                            </li>
-                        ))}
-                         {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events.</p>}
-                    </ul>
-                )}
+                <ul className="space-y-3">
+                    {highPriorityEvents.map(event => (
+                        <li key={event.id} className="flex items-center justify-between text-sm">
+                            <div>
+                                <p className="font-medium">{event.title}</p>
+                                <p className="text-xs text-muted-foreground">{new Date(event.date + 'T00:00:00').toLocaleDateString()}</p>
+                            </div>
+                            <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
+                        </li>
+                    ))}
+                        {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events.</p>}
+                </ul>
                  <Button variant="outline" className="mt-6 w-full" asChild>
                     <Link href="/calendar">View Full Calendar <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
