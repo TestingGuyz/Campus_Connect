@@ -63,5 +63,28 @@ service cloud.firestore {
       allow read: if isAdmin() || isOwner(userId);
       allow write: if isAdmin();
     }
+
+    // Assignments can be read by assigned teachers/students, created/deleted by teachers/admins.
+    match /assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    // Student-specific assignment data can only be accessed by the student themselves.
+    match /student-assignments/{studentAssignmentId} {
+        allow read, write: if isSignedIn() && request.auth.uid == resource.data.studentId;
+    }
+    
+    // Group messages can be read by any signed in user, but only created by them.
+    match /groups/{groupId}/messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.authorId;
+    }
+
+    // Events can be read by anyone signed in, but only created by admins.
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
   }
 }
