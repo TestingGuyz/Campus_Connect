@@ -2,22 +2,29 @@
 
 import { createContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
 import { Icons } from '@/components/icons';
+
+export type UserRole = 'admin' | 'student' | 'teacher';
 
 export type User = {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'student' | 'teacher';
+  role: UserRole;
   className?: string;
   sectionName?: string;
 };
 
+// This mirrors the structure of custom claims we would set on the backend.
+export type AuthClaims = {
+  role?: UserRole;
+};
+
 export type AuthContextType = {
   user: User | null;
-  login: (user: User) => void;
+  claims: AuthClaims | null;
+  login: (user: User, claims: AuthClaims) => void;
   logout: () => void;
   isAuthLoading: boolean; 
 };
@@ -56,42 +63,56 @@ function LoadingScreen() {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [claims, setClaims] = useState<AuthClaims | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('campus-connect-user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    let isMounted = true;
+    const checkUser = () => {
+      try {
+        const storedUser = localStorage.getItem('campus-connect-user');
+        const storedClaims = localStorage.getItem('campus-connect-claims');
+        if (isMounted) {
+          if (storedUser && storedClaims) {
+            setUser(JSON.parse(storedUser));
+            setClaims(JSON.parse(storedClaims));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to parse auth data from localStorage', error);
+        localStorage.removeItem('campus-connect-user');
+        localStorage.removeItem('campus-connect-claims');
+      } finally {
+        if (isMounted) {
+          // Artificial delay for mock environment
+          setTimeout(() => setIsAuthLoading(false), 500);
+        }
       }
-    } catch (error) {
-      console.error('Failed to parse user from localStorage', error);
-      localStorage.removeItem('campus-connect-user');
-    }
-    // Artificial delay to ensure all services are ready in a mock environment
-    setTimeout(() => {
-      setIsAuthLoading(false); 
-    }, 500);
+    };
+    
+    checkUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const login = useCallback((newUser: User) => {
-    setIsAuthLoading(true);
+  const login = useCallback((newUser: User, newClaims: AuthClaims) => {
     localStorage.setItem('campus-connect-user', JSON.stringify(newUser));
+    localStorage.setItem('campus-connect-claims', JSON.stringify(newClaims));
     setUser(newUser);
+    setClaims(newClaims);
     router.push('/dashboard');
-    // Ensure loading state is false after login completes
-    setTimeout(() => setIsAuthLoading(false), 100);
   }, [router]);
 
   const logout = useCallback(() => {
-    setIsAuthLoading(true);
     localStorage.removeItem('campus-connect-user');
+    localStorage.removeItem('campus-connect-claims');
     setUser(null);
+    setClaims(null);
     router.push('/login');
-     // Ensure loading state is false after logout completes
-    setTimeout(() => setIsAuthLoading(false), 100);
   }, [router]);
   
   useEffect(() => {
@@ -108,14 +129,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const contextValue: AuthContextType = { 
       user, 
+      claims,
       login, 
       logout, 
       isAuthLoading 
   };
   
-  // Render a loading screen while auth state is being determined,
-  // or if we are in a redirect state.
-  if (isAuthLoading || (!user && pathname !== '/login') || (user && pathname === '/login')) {
+  if (isAuthLoading) {
+      return <LoadingScreen />;
+  }
+  
+  // This prevents flashing the login page while redirecting.
+  const isAuthPage = pathname === '/login';
+  if ((!user && !isAuthPage) || (user && isAuthPage)) {
       return <LoadingScreen />;
   }
 

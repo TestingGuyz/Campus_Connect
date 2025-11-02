@@ -8,32 +8,49 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useAuth, User } from '@/hooks/use-auth';
+import { useAuth, User, AuthClaims } from '@/hooks/use-auth';
 import { Icons } from '@/components/icons';
 
 export default function LoginPage() {
   const { login } = useAuth();
 
-  const handleLogin = (role: 'admin' | 'student') => {
+  const handleLogin = (role: 'admin' | 'student' | 'teacher') => {
     let user: User;
-    if (role === 'admin') {
-      user = {
-        id: 'admin1',
-        name: 'Dr. Evelyn Reed',
-        email: 'admin@campus.com',
-        role: 'admin',
-      };
-    } else {
-      user = {
-        id: 'student1',
-        name: 'Alex Johnson',
-        email: 'student@campus.com',
-        role: 'student',
-        className: '10',
-        sectionName: 'A'
-      };
+    let claims: AuthClaims;
+
+    switch (role) {
+      case 'admin':
+        user = {
+          id: 'admin1',
+          name: 'Dr. Evelyn Reed',
+          email: 'admin@campus.com',
+          role: 'admin',
+        };
+        claims = { role: 'admin' };
+        break;
+      case 'teacher':
+        user = {
+          id: 'teacher1',
+          name: 'Mr. Davison',
+          email: 'teacher.davison@campus.com',
+          role: 'teacher',
+        };
+        claims = { role: 'teacher' };
+        break;
+      case 'student':
+      default:
+        user = {
+          id: 'student1',
+          name: 'Alex Johnson',
+          email: 'student@campus.com',
+          role: 'student',
+          className: '10',
+          sectionName: 'A'
+        };
+        claims = { role: 'student' };
+        break;
     }
-    login(user);
+    login(user, claims);
   };
 
   return (
@@ -50,7 +67,10 @@ export default function LoginPage() {
           <Button className="w-full" onClick={() => handleLogin('admin')}>
             Login as Admin
           </Button>
-          <Button variant="secondary" className="w-full" onClick={() => handleLogin('student')}>
+          <Button variant="secondary" className="w-full" onClick={() => handleLogin('teacher')}>
+            Login as Teacher
+          </Button>
+          <Button variant="outline" className="w-full" onClick={() => handleLogin('student')}>
             Login as Student
           </Button>
         </CardContent>

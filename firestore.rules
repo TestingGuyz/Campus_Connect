@@ -7,82 +7,73 @@ service cloud.firestore {
     function signedIn() {
       return request.auth != null;
     }
-
+    
+    // Custom claims checkers. These are much more performant and secure.
     function isAdmin() {
-      // Check if the user is in the /admins collection
-      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return signedIn() && request.auth.token.role == 'admin';
     }
 
     function isTeacher() {
-      // Check if the user is in the /teachers collection
-      return signedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+      return signedIn() && request.auth.token.role == 'teacher';
     }
 
-    // A user is a student if they are signed in and not an admin or teacher.
-    // This is a simplification. For more complex scenarios, you might have a dedicated 'students' collection for auth records.
     function isStudent() {
-      return signedIn() && !isAdmin() && !isTeacher();
+      return signedIn() && request.auth.token.role == 'student';
     }
 
 
     // --- Collection-specific Rules ---
 
+    // Admins have God-mode. This simplifies all other rules.
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
     match /admins/{userId} {
       // Only other admins can read/write the admins list.
+      // This is now covered by the God-mode rule, but kept for clarity.
       allow read, write: if isAdmin();
     }
 
     match /teachers/{teacherId} {
-      // Admins can manage teachers. Teachers can read their own profile.
-      allow read: if isAdmin() || (signedIn() && request.auth.uid == teacherId);
-      allow write: if isAdmin();
+      // Teachers can read their own profile.
+      allow read: if isTeacher() && request.auth.uid == teacherId;
+      // Admins can manage teachers (covered by God-mode rule).
     }
     
-    // Classes can be read by any authenticated user, but only managed by admins.
     match /classes/{classId} {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      // Admins can write (covered by God-mode rule).
 
-      // Sections can be read by any authenticated user.
-      // Sections can be managed by admins or teachers.
       match /sections/{sectionId} {
         allow read: if signedIn();
-        allow write: if isAdmin() || isTeacher();
+        allow write: if isTeacher(); // Teachers can manage sections.
 
-        // Students can be read by admins and teachers.
-        // Student documents are managed by admins.
         match /students/{studentId} {
-          allow read: if isAdmin() || isTeacher();
-          allow write: if isAdmin();
+          allow read: if isTeacher();
         }
         
-        // Timetables can be read by any signed-in user.
         match /timetable/{docId} {
             allow read: if signedIn();
-            allow write: if isAdmin() || isTeacher();
+            allow write: if isTeacher();
         }
       }
     }
     
-    // Assignments can be read by anyone signed in.
-    // Assignments can only be created/updated/deleted by admins or teachers.
     match /assignments/{assignmentId} {
       allow read: if signedIn();
-      allow write: if isAdmin() || isTeacher();
+      allow write: if isTeacher();
     }
 
-    // Student-specific assignment tracking data.
-    // Only the student themselves can create or update their own assignment status.
     match /student-assignments/{docId} {
-      allow read, write: if signedIn() && (
-        (request.resource != null && request.auth.uid == request.resource.data.studentId) || // On create
-        (resource != null && request.auth.uid == resource.data.studentId) // on update/delete
+      // A student can only read/write their own assignment status.
+      allow read, write: if isStudent() && (
+        (request.resource != null && request.auth.uid == request.resource.data.studentId) || 
+        (resource != null && request.auth.uid == resource.data.studentId) 
       );
     }
     
-    // Chat groups
     match /groups/{groupId}/messages/{messageId} {
-      // Anyone signed in can read messages in any group
       allow read: if signedIn();
       // Users can only create messages as themselves
       allow create: if signedIn() && request.auth.uid == request.resource.data.authorId;
@@ -90,12 +81,9 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Calendar events
     match /events/{eventId} {
-      // Anyone can read events
       allow read: if signedIn();
-      // Only admins can create, update, or delete events.
-      allow write: if isAdmin();
+      // Admins can create/update/delete events (covered by God-mode rule).
     }
   }
 }
