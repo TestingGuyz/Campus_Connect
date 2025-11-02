@@ -2,6 +2,15 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // --- TEMPORARY DEBUGGING RULE ---
+    // This rule is completely open. It is for testing purposes ONLY.
+    // Revert to strict rules before production.
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    /*
+    // --- PREVIOUS SECURE RULES (COMMENTED OUT FOR DEBUGGING) ---
 
     // --- Auth helper functions ---
     function signedIn() {
@@ -85,5 +94,6 @@ service cloud.firestore {
       allow read: if signedIn();
       // Admins can create/update/delete events (covered by God-mode rule).
     }
+    */
   }
 }

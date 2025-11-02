@@ -20,6 +20,7 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
+import { AuthStatusMonitor } from '@/components/debug/AuthStatusMonitor';
 
 interface NavItem {
   href: string;
@@ -122,6 +123,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <AuthStatusMonitor />
     </div>
   );
 }
