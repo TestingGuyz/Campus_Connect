@@ -130,12 +130,11 @@ export default function LoginPage() {
   };
 
   const handleQuickLogin = (role: 'admin' | 'student') => {
-     const mockUsers: Record<string, any> = {
-      'admin': { id: 'admin1', name: 'Dr. Evelyn Reed', email: 'admin@campus.com', role: 'admin' },
-      'student': { id: 'student1', name: 'Alex Johnson', email: 'student@campus.com', role: 'student', className: '10', sectionName: 'A' },
+     const mockUsers = {
+      'admin': { id: 'admin1', name: 'Dr. Evelyn Reed', email: 'admin@campus.com', role: 'admin' as const },
+      'student': { id: 'student1', name: 'Alex Johnson', email: 'student@campus.com', role: 'student' as const, className: '10', sectionName: 'A' },
     };
     login(mockUsers[role]);
-    router.push('/dashboard');
   };
 
   return (
