@@ -14,14 +14,15 @@ export class FirestorePermissionError extends Error {
   public readonly context: SecurityRuleContext;
 
   constructor(context: SecurityRuleContext) {
-    // Create a simple, stable error message.
-    const message = `FirestorePermissionError: An operation on path '${context.path}' was denied. Operation: ${context.operation}.`;
+    // Create a simple, stable error message that is informative.
+    const message = `FirestorePermissionError: The operation '${context.operation}' on path '${context.path}' was denied by security rules.`;
+    
     super(message);
+    
     this.name = 'FirestorePermissionError';
     this.context = context;
 
-    // It's often helpful to log the context to the console for debugging.
-    // This will appear in the developer console, not as part of the thrown error overlay.
-    console.error("Firestore Permission Error Context:", context);
+    // Ensure the prototype chain is correctly set up.
+    Object.setPrototypeOf(this, FirestorePermissionError.prototype);
   }
 }

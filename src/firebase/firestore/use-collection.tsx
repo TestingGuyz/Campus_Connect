@@ -69,7 +69,7 @@ export function useCollection<T = any>(
   useEffect(() => {
     // --- Strict Guard ---
     // 1. Wait for authentication to finish.
-    // 2. If auth is finished and there's no user, we can stop. There's nothing to query.
+    // 2. If auth is finished and there's no user, we can stop. There's nothing to query for an unauthenticated user.
     // 3. If there is a user, but the query itself is null (e.g., waiting for other dependencies), also stop.
     if (isAuthLoading || !user || !memoizedTargetRefOrQuery) {
       setIsHookLoading(false); // Not loading data if we don't have a user or query

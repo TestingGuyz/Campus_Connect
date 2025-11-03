@@ -3,9 +3,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
-      // WARNING: These rules are wide open.
+      // WARNING: These rules are wide open for debugging.
       // Every user can read and write all data.
-      // This is for debugging purposes only.
       allow read, write: if true;
     }
   }
