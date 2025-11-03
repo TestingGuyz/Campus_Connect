@@ -9,7 +9,7 @@ type SecurityRuleContext = {
 interface SecurityRuleRequest {
   auth: { uid: string | null }; // Simplified auth object
   method: string;
-  path: string;
+  path:string;
   resource?: {
     data: any;
   };
@@ -24,7 +24,7 @@ interface SecurityRuleRequest {
 function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   // We can't safely get the user here, so we'll represent auth status as unknown.
   // The core information for debugging is the operation and path.
-  const authObject = { uid: null };
+  const authObject = { uid: null }; // Represent auth as null for client-side errors
 
   return {
     auth: authObject,
@@ -40,23 +40,14 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
  * @returns A string containing the error message and the JSON payload.
  */
 function buildErrorMessage(requestObject: SecurityRuleRequest): string {
-  // Check if the error is due to being unauthenticated.
-  const isAuthNull = !requestObject.auth?.uid;
-  const denialReason = isAuthNull
-    ? "The request was unauthenticated (auth is null)."
-    : "The authenticated user does not have permission.";
+  const denialReason = "The request was unauthenticated (auth is null).";
 
-  return `FirestoreError: Missing or insufficient permissions. ${denialReason}
-
-The following request was denied by Firestore Security Rules:
-${JSON.stringify(requestObject, null, 2)}`;
+  return `FirestoreError: Missing or insufficient permissions. ${denialReason}\n\nThe following request was denied by Firestore Security Rules:\n${JSON.stringify(requestObject, null, 2)}`;
 }
 
 /**
- * A custom error class designed to be consumed by an LLM for debugging.
- * It structures the error information to mimic the request object
- * available in Firestore Security Rules, but in a more stable way that
- * does not depend on the live auth state.
+ * A custom error class designed to provide better debugging information for Firestore permission errors.
+ * It structures the error information to mimic the request object available in Firestore Security Rules.
  */
 export class FirestorePermissionError extends Error {
   public readonly request: SecurityRuleRequest;
