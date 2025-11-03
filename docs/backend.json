@@ -118,15 +118,27 @@
       "description": "Represents the weekly timetable for a specific class section.",
       "type": "object",
       "properties": {
-        "9:00-10:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } },
-        "10:00-11:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } },
-        "11:00-12:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } },
-        "12:00-13:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } },
-        "13:00-14:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } },
-        "14:00-15:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } },
-        "15:00-16:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } },
-        "16:00-17:00": { "type": "object", "properties": { "Monday": {"type": "string"}, "Tuesday": {"type": "string"}, "Wednesday": {"type": "string"}, "Thursday": {"type": "string"}, "Friday": {"type": "string"} } }
+        "Monday": { "$ref": "#/entities/TimetableDay" },
+        "Tuesday": { "$ref": "#/entities/TimetableDay" },
+        "Wednesday": { "$ref": "#/entities/TimetableDay" },
+        "Thursday": { "$ref": "#/entities/TimetableDay" },
+        "Friday": { "$ref": "#/entities/TimetableDay" }
       }
+    },
+    "TimetableDay": {
+        "title": "Timetable Day",
+        "description": "Represents the schedule for a single day.",
+        "type": "object",
+        "properties": {
+            "period1": { "type": "string", "description": "Subject for Period 1" },
+            "period2": { "type": "string", "description": "Subject for Period 2" },
+            "period3": { "type": "string", "description": "Subject for Period 3" },
+            "period4": { "type": "string", "description": "Subject for Period 4" },
+            "period5": { "type": "string", "description": "Subject for Period 5" },
+            "period6": { "type": "string", "description": "Subject for Period 6" },
+            "period7": { "type": "string", "description": "Subject for Period 7" },
+            "period8": { "type": "string", "description": "Subject for Period 8" }
+        }
     },
     "Assignment": {
       "title": "Assignment",
@@ -168,6 +180,20 @@
         "timestamp": { "type": "object" }
       },
       "required": ["authorName", "authorId", "message", "timestamp"]
+    },
+    "AdminMessage": {
+      "title": "Admin Message",
+      "description": "Represents a message between a student and an admin.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "message": { "type": "string" },
+        "reply": { "type": "string" },
+        "isReply": { "type": "boolean" },
+        "timestamp": { "type": "object" }
+      },
+      "required": ["studentId", "studentName", "message", "isReply", "timestamp"]
     },
     "Event": {
         "title": "Event",
@@ -212,7 +238,7 @@
                 "schema": {
                   "$ref": "#/entities/Timetable"
                 },
-                "description": "Sub-collection for the weekly timetable of a section."
+                "description": "Sub-collection for the weekly timetable of a section. The document ID is 'schedule'."
               }
             }
           }
@@ -252,6 +278,12 @@
               }
           }
       },
+      "admin-messages": {
+        "schema": {
+          "$ref": "#/entities/AdminMessage"
+        },
+        "description": "Messages between students and administrators."
+      },
       "events": {
         "schema": {
             "$ref": "#/entities/Event"
@@ -277,15 +309,12 @@
                   { "documentId": "student2", "data": { "name": "Maria Garcia" } }
               ]},
               { "collection": "timetable", "documents": [
-                  { "documentId": "week1", "data": {
-                      "09:00-10:00": { "Monday": "Mathematics", "Tuesday": "Physics", "Wednesday": "Mathematics", "Thursday": "Physics", "Friday": "Literature" },
-                      "10:00-11:00": { "Monday": "Physics", "Tuesday": "History", "Wednesday": "Physics", "Thursday": "Literature", "Friday": "Mathematics" },
-                      "11:00-12:00": { "Monday": "Literature", "Tuesday": "Mathematics", "Wednesday": "History", "Thursday": "Mathematics", "Friday": "Physics" },
-                      "12:00-13:00": { "Monday": "Lunch", "Tuesday": "Lunch", "Wednesday": "Lunch", "Thursday": "Lunch", "Friday": "Lunch" },
-                      "13:00-14:00": { "Monday": "History", "Tuesday": "Literature", "Wednesday": "Art", "Thursday": "History", "Friday": "Sports" },
-                      "14:00-15:00": { "Monday": "Lab", "Tuesday": "Lab", "Wednesday": "Music", "Thursday": "Lab", "Friday": "Sports" },
-                      "15:00-16:00": { "Monday": "Library", "Tuesday": "Assembly", "Wednesday": "Lab", "Thursday": "Library", "Friday": "Club Activity" },
-                      "16:00-17:00": { "Monday": "Self-Study", "Tuesday": "Self-Study", "Wednesday": "Self-Study", "Thursday": "Self-Study", "Friday": "Self-Study" }
+                  { "documentId": "schedule", "data": {
+                      "Monday": {"period1": "Mathematics", "period2": "Physics", "period3": "Literature", "period4": "Tiffin", "period5": "Break", "period6": "History", "period7": "Lab", "period8": "Library"},
+                      "Tuesday": {"period1": "Physics", "period2": "History", "period3": "Mathematics", "period4": "Tiffin", "period5": "Break", "period6": "Literature", "period7": "Lab", "period8": "Assembly"},
+                      "Wednesday": {"period1": "Mathematics", "period2": "Physics", "period3": "History", "period4": "Tiffin", "period5": "Break", "period6": "Art", "period7": "Music", "period8": "Lab"},
+                      "Thursday": {"period1": "Physics", "period2": "Literature", "period3": "Mathematics", "period4": "Tiffin", "period5": "Break", "period6": "History", "period7": "Lab", "period8": "Library"},
+                      "Friday": {"period1": "Literature", "period2": "Mathematics", "period3": "Physics", "period4": "Tiffin", "period5": "Break", "period6": "Sports", "period7": "Sports", "period8": "Club Activity"}
                   }}
               ]}
             ]
@@ -297,18 +326,6 @@
             "subcollections": [
               { "collection": "students", "documents": [
                   { "documentId": "student3", "data": { "name": "James Smith" } }
-              ]},
-              { "collection": "timetable", "documents": [
-                  { "documentId": "week1", "data": {
-                      "09:00-10:00": { "Monday": "History", "Tuesday": "Literature", "Wednesday": "History", "Thursday": "Literature", "Friday": "Mathematics" },
-                      "10:00-11:00": { "Monday": "Literature", "Tuesday": "Physics", "Wednesday": "Literature", "Thursday": "Mathematics", "Friday": "History" },
-                      "11:00-12:00": { "Monday": "Physics", "Tuesday": "History", "Wednesday": "Mathematics", "Thursday": "Physics", "Friday": "Lab" },
-                      "12:00-13:00": { "Monday": "Lunch", "Tuesday": "Lunch", "Wednesday": "Lunch", "Thursday": "Lunch", "Friday": "Lunch" },
-                      "13:00-14:00": { "Monday": "Mathematics", "Tuesday": "Art", "Wednesday": "Physics", "Thursday": "Sports", "Friday": "Music" },
-                      "14:00-15:00": { "Monday": "Lab", "Tuesday": "Music", "Wednesday": "Lab", "Thursday": "Sports", "Friday": "Library" },
-                      "15:00-16:00": { "Monday": "Assembly", "Tuesday": "Self-Study", "Wednesday": "Club Activity", "Thursday": "Self-Study", "Friday": "Self-Study" },
-                      "16:00-17:00": { "Monday": "Self-Study", "Tuesday": "Self-Study", "Wednesday": "Self-Study", "Thursday": "Self-Study", "Friday": "Self-Study" }
-                  }}
               ]}
             ]
           }

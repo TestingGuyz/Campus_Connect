@@ -1,60 +1,53 @@
 'use client';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
-import { useFirestore } from '@/firebase';
-import { collection, query, getDocs } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, doc, getDoc, setDoc } from 'firebase/firestore';
+import { useEffect, useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
+import { Loader2, Save } from 'lucide-react';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
+type TimetableDay = {
+  period1: string; period2: string; period3: string; period4: string;
+  period5: string; period6: string; period7: string; period8: string;
+};
 type TimetableData = {
-  [time: string]: {
-    [day: string]: string;
-  };
+  Monday: TimetableDay; Tuesday: TimetableDay; Wednesday: TimetableDay;
+  Thursday: TimetableDay; Friday: TimetableDay;
+};
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const periods: (keyof TimetableDay)[] = ["period1", "period2", "period3", "period4", "period5", "period6", "period7", "period8"];
+const periodTimes = ["9:00-10:00", "10:00-11:00", "11:00-12:00", "12:00-12:40", "12:40-1:20", "1:20-2:00", "2:00-3:00", "3:00-4:00"];
+
+const initialTimetable: TimetableData = {
+  Monday: { period1: '', period2: '', period3: '', period4: '', period5: '', period6: '', period7: '', period8: '' },
+  Tuesday: { period1: '', period2: '', period3: '', period4: '', period5: '', period6: '', period7: '', period8: '' },
+  Wednesday: { period1: '', period2: '', period3: '', period4: '', period5: '', period6: '', period7: '', period8: '' },
+  Thursday: { period1: '', period2: '', period3: '', period4: '', period5: '', period6: '', period7: '', period8: '' },
+  Friday: { period1: '', period2: '', period3: '', period4: '', period5: '', period6: '', period7: '', period8: '' },
 };
 
 const getSubjectBadgeColor = (subject: string) => {
-    switch(subject.toLowerCase()){
-        case 'mathematics': return 'bg-red-200 text-red-800 border-red-300';
-        case 'physics': return 'bg-blue-200 text-blue-800 border-blue-300';
-        case 'literature': return 'bg-green-200 text-green-800 border-green-300';
-        case 'history': return 'bg-yellow-200 text-yellow-800 border-yellow-300';
-        case 'sports': return 'bg-purple-200 text-purple-800 border-purple-300';
-        case 'lab': return 'bg-indigo-200 text-indigo-800 border-indigo-300';
-        case 'lunch': return 'bg-gray-200 text-gray-800 border-gray-300';
-        case 'art': return 'bg-pink-200 text-pink-800 border-pink-300';
-        case 'music': return 'bg-teal-200 text-teal-800 border-teal-300';
-        default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-}
+    // A simple hash function to get a color from a list
+    if (!subject) return 'bg-gray-100 text-gray-800 border-gray-200';
+    const colors = [
+        'bg-red-100 text-red-800 border-red-200', 'bg-blue-100 text-blue-800 border-blue-200',
+        'bg-green-100 text-green-800 border-green-200', 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        'bg-purple-100 text-purple-800 border-purple-200', 'bg-indigo-100 text-indigo-800 border-indigo-200',
+        'bg-pink-100 text-pink-800 border-pink-200', 'bg-teal-100 text-teal-800 border-teal-200',
+    ];
+    const hash = subject.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
+    return colors[Math.abs(hash) % colors.length];
+};
 
-const LoadingSkeleton = () => (
-    <Card>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[150px]"><Skeleton className="h-6 w-24" /></TableHead>
-                {Array.from({ length: 5 }).map((_, i) => <TableHead key={i}><Skeleton className="h-6 w-24" /></TableHead>)}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-8 w-full" /></TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-);
-
-export default function TimetablePage() {
+function StudentTimetableView() {
     const { user, isAuthLoading } = useAuth();
     const firestore = useFirestore();
     const [timetable, setTimetable] = useState<TimetableData | null>(null);
@@ -62,22 +55,17 @@ export default function TimetablePage() {
 
     useEffect(() => {
         const fetchTimetable = async () => {
-            if (isAuthLoading || !firestore || !user) {
-                return;
-            };
-
-            if (user.role !== 'student' || !user.className || !user.sectionName) {
-                setIsLoading(false);
-                return;
+            if (isAuthLoading || !firestore || !user || user.role !== 'student' || !user.className || !user.sectionName) {
+              setIsLoading(false);
+              return;
             }
-
+            setIsLoading(true);
             try {
-                const timetableCollectionRef = collection(firestore, `classes/${user.className}/sections/${user.sectionName}/timetable`);
-                const timetableSnapshot = await getDocs(timetableCollectionRef);
+                const timetableDocRef = doc(firestore, `classes/${user.className}/sections/${user.sectionName}/timetable/schedule`);
+                const timetableSnapshot = await getDoc(timetableDocRef);
                 
-                if (!timetableSnapshot.empty) {
-                    const timetableDoc = timetableSnapshot.docs[0]; // Assuming one timetable doc per section
-                    setTimetable(timetableDoc.data() as TimetableData);
+                if (timetableSnapshot.exists()) {
+                    setTimetable(timetableSnapshot.data() as TimetableData);
                 } else {
                     setTimetable(null);
                 }
@@ -91,58 +79,193 @@ export default function TimetablePage() {
 
         fetchTimetable();
     }, [user, firestore, isAuthLoading]);
-  
-  const totalLoading = isLoading || isAuthLoading;
-  const timeSlots = timetable ? Object.keys(timetable).sort() : [];
-  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-headline font-bold">Weekly Timetable</h1>
-        <p className="text-muted-foreground">
-            {user?.role === 'student' 
-                ? `Class schedule for Grade ${user.className} - Section ${user.sectionName}.`
-                : 'Your weekly class schedule.'}
-        </p>
-      </div>
+    if (isLoading || isAuthLoading) {
+        return <Skeleton className="h-[400px] w-full" />
+    }
 
-      {totalLoading ? <LoadingSkeleton /> : timetable ? (
-        <Card>
-            <CardContent className="pt-6">
-            <Table>
-                <TableHeader>
+    if (!timetable) {
+        return <Card><CardContent className="p-6 text-center text-muted-foreground">Timetable not yet available for your class.</CardContent></Card>
+    }
+
+    return (
+        <Table>
+            <TableHeader>
                 <TableRow>
-                    <TableHead className="w-[150px]">Time</TableHead>
+                    <TableHead className="w-[120px]">Time</TableHead>
                     {days.map(day => <TableHead key={day}>{day}</TableHead>)}
                 </TableRow>
-                </TableHeader>
-                <TableBody>
-                {timeSlots.map(time => (
-                    <TableRow key={time}>
-                    <TableCell className="font-medium">{time}</TableCell>
-                    {days.map(day => (
-                        <TableCell key={day}>
-                        {timetable[time as keyof typeof timetable]?.[day as keyof typeof timetable[keyof typeof timetable]] && (
-                            <Badge variant="outline" className={`font-semibold ${getSubjectBadgeColor(timetable[time as keyof typeof timetable][day as keyof typeof timetable[keyof typeof timetable]])}`}>
-                                {timetable[time as keyof typeof timetable][day as keyof typeof timetable[keyof typeof timetable]]}
-                            </Badge>
-                        )}
+            </TableHeader>
+            <TableBody>
+                {periods.map((period, index) => (
+                    <TableRow key={period}>
+                        <TableCell className="font-medium">
+                            {periodTimes[index]}
+                            {index === 3 && <div className='text-xs text-center text-muted-foreground pt-2'>(Tiffin</div>}
+                            {index === 4 && <div className='text-xs text-center text-muted-foreground pb-2'>Break)</div>}
                         </TableCell>
-                    ))}
+                        {days.map(day => (
+                            <TableCell key={day}>
+                                {timetable[day as keyof TimetableData]?.[period] && (
+                                    <Badge variant="outline" className={`font-semibold ${getSubjectBadgeColor(timetable[day as keyof TimetableData][period])}`}>
+                                        {timetable[day as keyof TimetableData][period]}
+                                    </Badge>
+                                )}
+                            </TableCell>
+                        ))}
                     </TableRow>
                 ))}
-                </TableBody>
-            </Table>
-            </CardContent>
-        </Card>
-      ) : (
-        <Card>
-            <CardContent className="pt-6 text-center text-muted-foreground">
-                <p>No timetable available for your class and section.</p>
-            </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+            </TableBody>
+        </Table>
+    );
+}
+
+function TeacherAdminTimetableView() {
+    const firestore = useFirestore();
+    const [classId, setClassId] = useState('10');
+    const [sectionId, setSectionId] = useState('A');
+    const [timetable, setTimetable] = useState<TimetableData>(initialTimetable);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        const fetchTimetable = async () => {
+            if (!firestore || !classId || !sectionId) return;
+            setIsLoading(true);
+            try {
+                const timetableDocRef = doc(firestore, `classes/${classId}/sections/${sectionId}/timetable/schedule`);
+                const timetableSnapshot = await getDoc(timetableDocRef);
+                if (timetableSnapshot.exists()) {
+                    setTimetable(timetableSnapshot.data() as TimetableData);
+                } else {
+                    setTimetable(initialTimetable);
+                }
+            } catch (error) {
+                console.error("Error fetching timetable:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchTimetable();
+    }, [firestore, classId, sectionId]);
+
+    const handleInputChange = (day: keyof TimetableData, period: keyof TimetableDay, value: string) => {
+        setTimetable(prev => ({
+            ...prev,
+            [day]: { ...prev[day], [period]: value }
+        }));
+    };
+
+    const handleSave = async () => {
+        if (!firestore) return;
+        setIsSaving(true);
+        const timetableDocRef = doc(firestore, `classes/${classId}/sections/${sectionId}/timetable/schedule`);
+        try {
+            await setDoc(timetableDocRef, timetable);
+            toast({ title: 'Success!', description: `Timetable for Class ${classId}-${sectionId} has been saved.` });
+        } catch (error) {
+            const permissionError = new FirestorePermissionError({
+                path: timetableDocRef.path,
+                operation: 'write',
+                requestResourceData: timetable
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({ variant: 'destructive', title: 'Error saving timetable', description: 'You may not have permission to perform this action.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Select Class and Section</CardTitle>
+                    <CardDescription>Choose the class and section to manage the timetable for.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex gap-4">
+                    <div className="flex-1 space-y-2">
+                        <label htmlFor="class-id">Class</label>
+                        <Input id="class-id" value={classId} onChange={(e) => setClassId(e.target.value)} placeholder="e.g., 10" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <label htmlFor="section-id">Section</label>
+                        <Input id="section-id" value={sectionId} onChange={(e) => setSectionId(e.target.value)} placeholder="e.g., A" />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Edit Timetable</CardTitle>
+                        <CardDescription>Fill in the subjects for each period.</CardDescription>
+                    </div>
+                    <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Save Timetable
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? <Skeleton className="h-[400px] w-full" /> : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[120px]">Time</TableHead>
+                                    {days.map(day => <TableHead key={day}>{day}</TableHead>)}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {periods.map((period, index) => (
+                                    <TableRow key={period}>
+                                        <TableCell className="font-medium">
+                                            {periodTimes[index]}
+                                            {index === 3 && <div className='text-xs text-center text-muted-foreground pt-2'>(Tiffin Break)</div>}
+                                        </TableCell>
+                                        {days.map(day => (
+                                            <TableCell key={day}>
+                                                {index === 3 || index === 4 ? (
+                                                    <Badge variant="outline" className="font-semibold bg-gray-200 text-gray-800 border-gray-300">
+                                                        {index === 3 ? 'Tiffin' : 'Break'}
+                                                    </Badge>
+                                                ) : (
+                                                    <Input
+                                                        value={timetable[day as keyof TimetableData]?.[period] || ''}
+                                                        onChange={(e) => handleInputChange(day as keyof TimetableData, period, e.target.value)}
+                                                        className="h-8"
+                                                    />
+                                                )}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+export default function TimetablePage() {
+    const { user, isAuthLoading } = useAuth();
+    
+    if (isAuthLoading) {
+        return <Skeleton className="h-screen w-full" />;
+    }
+
+    const canManageTimetable = user?.role === 'admin' || user?.role === 'teacher';
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-headline font-bold">Weekly Timetable</h1>
+                <p className="text-muted-foreground">
+                    {canManageTimetable ? 'Manage class schedules.' : (user ? `Class schedule for Grade ${user.className} - Section ${user.sectionName}.` : 'Your weekly class schedule.')}
+                </p>
+            </div>
+            {canManageTimetable ? <TeacherAdminTimetableView /> : <StudentTimetableView />}
+        </div>
+    );
 }

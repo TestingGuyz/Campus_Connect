@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Clock,
   LayoutDashboard,
+  Mail,
   Menu,
   Settings,
   ShieldAlert,
@@ -34,10 +35,11 @@ const navItems: NavItem[] = [
   { href: '/profile', label: 'Profile', icon: User, roles: ['student', 'teacher'] },
   { href: '/attendance', label: 'Attendance', icon: CheckCircle2, roles: ['admin', 'teacher'] },
   { href: '/assignments', label: 'Assignments', icon: Book, roles: ['admin', 'student', 'teacher'] },
-  { href: '/timetable', label: 'Time Table', icon: Clock, roles: ['student', 'teacher'] },
+  { href: '/timetable', label: 'Time Table', icon: Clock, roles: ['admin', 'student', 'teacher'] },
   { href: '/groups', label: 'Groups', icon: Users, roles: ['admin', 'student', 'teacher'] },
   { href: '/calendar', label: 'Calendar', icon: Calendar, roles: ['admin', 'student', 'teacher'] },
   { href: '/contact-admin', label: 'Contact Admin', icon: ShieldAlert, roles: ['student'] },
+  { href: '/mailbox', label: 'Mailbox', icon: Mail, roles: ['admin'] },
   { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'student', 'teacher'] },
 ];
 
