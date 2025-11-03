@@ -3,13 +3,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useMemo } from 'react';
-import { Loader2, Send } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, Send, Wand2 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp, query, where, orderBy } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -17,11 +17,16 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { contactAdmin } from '@/ai/flows/contact-admin-flow';
 
 
 const FormSchema = z.object({
-  message: z.string().min(10, {
+  problemDetails: z.string().min(10, {
     message: 'Please describe your problem in at least 10 characters.',
+  }),
+   message: z.string().min(10, {
+    message: 'Message must be at least 10 characters.',
   }),
 });
 
@@ -40,11 +45,15 @@ export default function ContactAdminPage() {
   const { user, isAuthLoading } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: { message: '' },
+    defaultValues: { 
+      problemDetails: '',
+      message: '' 
+    },
   });
 
   const messagesQuery = useMemoFirebase(() => {
@@ -59,6 +68,34 @@ export default function ContactAdminPage() {
   const { data: messages, isLoading: isLoadingMessages } = useCollection<AdminMessage>(messagesQuery);
   const studentAvatar = PlaceHolderImages.find(p => p.id === 'student-avatar');
   const adminAvatar = PlaceHolderImages.find(p => p.id === 'admin-avatar');
+
+  async function handleGenerateMessage() {
+    if (!user) return;
+    const problemDetails = form.getValues('problemDetails');
+    if (!problemDetails || problemDetails.length < 10) {
+      form.setError('problemDetails', { type: 'manual', message: 'Please describe your problem in at least 10 characters.' });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await contactAdmin({
+        problemDetails: problemDetails,
+        studentId: user.id,
+        studentName: user.name,
+      });
+      if (result?.messageToAdmin) {
+        form.setValue('message', result.messageToAdmin);
+      } else {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not generate message. Please try again.' });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Error', description: 'An error occurred while generating the message.' });
+    } finally {
+      setIsGenerating(false);
+    }
+  }
 
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     if (!user || !firestore) {
@@ -95,7 +132,7 @@ export default function ContactAdminPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-headline font-bold">Contact Administrator</h1>
+        <h1 className="text-2xl font-bold">Contact Administrator</h1>
         <p className="text-muted-foreground">
           Send a message to the school administration and view their replies.
         </p>
@@ -124,7 +161,7 @@ export default function ContactAdminPage() {
                                 <p className="font-semibold">{isStudent ? msg.studentName : 'Admin'}</p>
                                 <p className="text-xs text-muted-foreground">{msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
-                            <p className={`text-sm text-foreground bg-muted p-3 rounded-lg mt-1 inline-block ${!isStudent ? 'bg-primary text-primary-foreground' : ''}`}>
+                            <p className={`text-sm text-foreground p-3 rounded-lg mt-1 inline-block ${!isStudent ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                                 {msg.message}
                             </p>
                         </div>
@@ -143,13 +180,13 @@ export default function ContactAdminPage() {
           </ScrollArea>
           <Separator className="my-4" />
            <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+               <FormField
                 control={form.control}
-                name="message"
+                name="problemDetails"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>New Message</FormLabel>
+                    <FormLabel>Describe your issue</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="For example: 'I am unable to upload my assignment for the history class...'"
@@ -157,15 +194,41 @@ export default function ContactAdminPage() {
                         {...field}
                       />
                     </FormControl>
+                    <FormDescription>Let our AI assistant help you draft a message to the admin.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-                {isSubmitting ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
+               <Button type="button" onClick={handleGenerateMessage} disabled={isGenerating} variant="outline" size="sm">
+                {isGenerating ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</>
                 ) : (
-                  <><Send className="mr-2 h-4 w-4" />Send Report</>
+                  <><Wand2 className="mr-2 h-4 w-4" />Generate Message with AI</>
+                )}
+              </Button>
+
+              <FormField
+                control={form.control}
+                name="message"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Your Message to the Admin</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Your generated or manually typed message will appear here."
+                        className="min-h-[120px] bg-muted/40"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isSubmitting || !form.formState.isValid || !form.getValues('message')} className="w-full sm:w-auto">
+                {isSubmitting ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending...</>
+                ) : (
+                  <><Send className="mr-2 h-4 w-4" />Send Message</>
                 )}
               </Button>
             </form>

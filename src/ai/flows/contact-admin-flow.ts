@@ -39,7 +39,7 @@ const prompt = ai.definePrompt({
   The student's ID is: {{studentId}}
   The student's name is: {{studentName}}
 
-  Formulate a message to the administrator, including relevant details about the problem while ensuring student privacy and security. Only include details that are relevant and safe to share with an administrator. Prioritize clear and efficient communication.
+  Based on the problem details, draft a concise and clear message for the student to send to the administrator. The message should include all necessary information for the admin to understand and address the issue.
   `,
 });
 
