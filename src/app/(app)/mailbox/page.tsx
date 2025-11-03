@@ -35,10 +35,13 @@ export default function MailboxPage() {
   const [isReplying, setIsReplying] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  // Correctly wait for auth to finish and user to be an admin before querying
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (isAuthLoading || !user || user.role !== 'admin' || !firestore) {
+      return null;
+    }
     return query(collection(firestore, 'admin-messages'), orderBy('timestamp', 'desc'));
-  }, [firestore, user]);
+  }, [firestore, user, isAuthLoading]);
 
   const { data: allMessages, isLoading: isLoadingMessages } = useCollection<AdminMessage>(messagesQuery);
   const studentAvatar = PlaceHolderImages.find(p => p.id === 'student-avatar');
@@ -76,7 +79,6 @@ export default function MailboxPage() {
   }, [selectedStudentId, studentThreads]);
   
   useEffect(() => {
-    // When a new thread is selected, scroll to the bottom.
     if (scrollAreaRef.current) {
         setTimeout(() => {
             const viewport = scrollAreaRef.current?.querySelector('div');
@@ -117,7 +119,7 @@ export default function MailboxPage() {
   }
 
 
-  if (isAuthLoading || isLoadingMessages) {
+  if (isAuthLoading) {
     return <Card><CardContent className="p-6 flex items-center justify-center h-[600px]"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> Loading mailbox...</CardContent></Card>;
   }
 
@@ -140,7 +142,8 @@ export default function MailboxPage() {
           <ScrollArea className="flex-1">
             <CardContent className="p-2">
               <div className="flex flex-col gap-1">
-                  {sortedStudentIds.map(studentId => {
+                  {isLoadingMessages && <div className="p-4 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></div>}
+                  {!isLoadingMessages && sortedStudentIds.map(studentId => {
                       const thread = studentThreads[studentId];
                       const lastMessage = thread.messages[0];
                       return (
@@ -160,7 +163,7 @@ export default function MailboxPage() {
                           </button>
                       )
                   })}
-                  {sortedStudentIds.length === 0 && <p className='p-4 text-center text-muted-foreground'>No messages yet.</p>}
+                  {!isLoadingMessages && sortedStudentIds.length === 0 && <p className='p-4 text-center text-muted-foreground'>No messages yet.</p>}
               </div>
             </CardContent>
           </ScrollArea>

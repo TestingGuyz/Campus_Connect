@@ -58,16 +58,15 @@ export default function ContactAdminPage() {
   });
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    
-    const userId = user.id;
+    // Correctly wait for auth to finish and user object to be available
+    if (isAuthLoading || !user || !firestore) return null;
     
     return query(
         collection(firestore, 'admin-messages'), 
-        where('studentId', '==', userId),
+        where('studentId', '==', user.id),
         orderBy('timestamp', 'asc')
     );
-  }, [firestore, user?.id]);
+  }, [firestore, user, isAuthLoading]);
 
   const { data: messages, isLoading: isLoadingMessages } = useCollection<AdminMessage>(messagesQuery);
   const studentAvatar = PlaceHolderImages.find(p => p.id === 'student-avatar');
@@ -95,13 +94,10 @@ export default function ContactAdminPage() {
 
     setIsGenerating(true);
     try {
-      const userId = user.id;
-      const userName = user.name || user.email || 'Student';
-      
       const result = await contactAdmin({
         problemDetails: problemDetails,
-        studentId: userId,
-        studentName: userName,
+        studentId: user.id,
+        studentName: user.name,
       });
       if (result?.messageToAdmin) {
         form.setValue('message', result.messageToAdmin);
@@ -123,12 +119,9 @@ export default function ContactAdminPage() {
     }
     setIsSubmitting(true);
     
-    const userId = user.id;
-    const userName = user.name || user.email || 'Student';
-    
     const messageData = {
-      studentId: userId,
-      studentName: userName,
+      studentId: user.id,
+      studentName: user.name,
       message: data.message,
       isReply: false,
       timestamp: serverTimestamp(),
@@ -154,7 +147,22 @@ export default function ContactAdminPage() {
 
   const isLoading = isAuthLoading || isLoadingMessages;
 
-  if (!isAuthLoading && !user) {
+  if (isAuthLoading) {
+     return (
+      <div className="flex items-center justify-center h-[400px]">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle>Contact Administrator</CardTitle>
+          </CardHeader>
+          <CardContent>
+             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto"/>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  if (!user) {
     return (
       <div className="flex items-center justify-center h-[400px]">
         <Card className="max-w-md">
@@ -186,13 +194,12 @@ export default function ContactAdminPage() {
             {isLoading && <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/></div>}
             {!isLoading && messages?.map(msg => {
                 const isStudent = !msg.isReply;
-                const displayName = user?.name || 'You';
                 
                 return (
                     <div key={msg.id} className={`flex items-start gap-3 my-4 ${isStudent ? 'justify-start' : 'flex-row-reverse'}`}>
                         <Avatar>
                             <AvatarImage src={isStudent ? studentAvatar?.imageUrl : adminAvatar?.imageUrl} />
-                            <AvatarFallback>{isStudent ? displayName.charAt(0) : 'A'}</AvatarFallback>
+                            <AvatarFallback>{isStudent ? user.name.charAt(0) : 'A'}</AvatarFallback>
                         </Avatar>
 
                         <div className={`w-auto max-w-[75%] flex flex-col ${isStudent ? 'items-start' : 'items-end'}`}>
