@@ -52,12 +52,7 @@ export function useDoc<T = any>(
 
 
   useEffect(() => {
-    if (isAuthLoading) {
-      setIsHookLoading(true);
-      return;
-    }
-
-    if (!user || !memoizedDocRef) {
+    if (isAuthLoading || !user || !memoizedDocRef) {
       setData(null);
       setIsHookLoading(false);
       setError(null);
