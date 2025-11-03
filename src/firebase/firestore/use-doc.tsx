@@ -1,3 +1,4 @@
+
 'use client';
     
 import { useState, useEffect } from 'react';
@@ -46,14 +47,19 @@ export function useDoc<T = any>(
 
   const [data, setData] = useState<StateDataType>(null);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
-  const { isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthLoading } = useAuth();
   const [isHookLoading, setIsHookLoading] = useState<boolean>(true);
 
 
   useEffect(() => {
-    if (isAuthLoading || !memoizedDocRef) {
-      setData(null);
+    if (isAuthLoading) {
       setIsHookLoading(true);
+      return;
+    }
+
+    if (!user || !memoizedDocRef) {
+      setData(null);
+      setIsHookLoading(false);
       setError(null);
       return;
     }
@@ -86,7 +92,7 @@ export function useDoc<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef, isAuthLoading]);
+  }, [memoizedDocRef, isAuthLoading, user]);
 
   const isLoading = isAuthLoading || isHookLoading;
 

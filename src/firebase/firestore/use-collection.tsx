@@ -69,16 +69,21 @@ export function useCollection<T = any>(
 
 
   useEffect(() => {
-    // If auth is loading OR there's no query OR there is no user object, it means the component is not ready to fetch data.
-    // Set loading to true because we are waiting for auth or a valid query.
-    if (isAuthLoading || !memoizedTargetRefOrQuery || !user) {
+    // If auth is still loading, we are not ready.
+    if (isAuthLoading) {
+      setIsHookLoading(true);
+      return;
+    }
+    
+    // If auth is done, but there's no user or no query, it's not a loading state, it's an empty/error state.
+    if (!user || !memoizedTargetRefOrQuery) {
       setData(null);
-      setIsHookLoading(true); 
+      setIsHookLoading(false); 
       setError(null);
       return;
     }
     
-    // We have a query, so now we are in a loading state.
+    // At this point, auth is done, we have a user, and we have a query. Start loading.
     setIsHookLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -118,8 +123,7 @@ export function useCollection<T = any>(
     throw new Error('useCollection query was not properly memoized using useMemoFirebase. This can cause infinite loops.');
   }
 
-  // The hook is loading if auth is loading OR if the hook itself is loading (waiting for the query).
-  // The query will only start after auth is no longer loading.
+  // The overall loading state is true if auth is loading OR if the hook is actively fetching data.
   const isLoading = isAuthLoading || isHookLoading;
   
   return { data, isLoading, error };
