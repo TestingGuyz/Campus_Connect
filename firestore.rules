@@ -2,22 +2,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // --- TEMPORARY DEBUGGING RULE ---
-    // This rule is completely open. It is for testing purposes ONLY.
-    // Revert to strict rules before production.
-    match /{document=**} {
-      allow read, write: if true;
-    }
-
-    /*
-    // --- PREVIOUS SECURE RULES (COMMENTED OUT FOR DEBUGGING) ---
-
     // --- Auth helper functions ---
     function signedIn() {
       return request.auth != null;
     }
     
-    // Custom claims checkers. These are much more performant and secure.
+    // Custom claims checkers. These are much more perform-ant and secure.
     function isAdmin() {
       return signedIn() && request.auth.token.role == 'admin';
     }
@@ -60,6 +50,7 @@ service cloud.firestore {
 
         match /students/{studentId} {
           allow read: if isTeacher();
+          allow write: if isAdmin() || isTeacher();
         }
         
         match /timetable/{docId} {
@@ -80,6 +71,8 @@ service cloud.firestore {
         (request.resource != null && request.auth.uid == request.resource.data.studentId) || 
         (resource != null && request.auth.uid == resource.data.studentId) 
       );
+      // A teacher can also read student assignment status
+      allow read: if isTeacher();
     }
     
     match /groups/{groupId}/messages/{messageId} {
@@ -89,11 +82,17 @@ service cloud.firestore {
       // No one can update or delete messages
       allow update, delete: if false;
     }
+    
+     match /admin-messages/{messageId} {
+        // Students can read their own messages and write new ones.
+        allow read, create: if isStudent() && request.resource.data.studentId == request.auth.uid;
+        // Admins can read all messages and write replies.
+        allow read, write: if isAdmin();
+    }
 
     match /events/{eventId} {
       allow read: if signedIn();
       // Admins can create/update/delete events (covered by God-mode rule).
     }
-    */
   }
 }
