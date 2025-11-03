@@ -59,21 +59,22 @@ export default function ContactAdminPage() {
 
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
+    
+    const userId = user.id;
+    
     return query(
         collection(firestore, 'admin-messages'), 
-        where('studentId', '==', user.id),
+        where('studentId', '==', userId),
         orderBy('timestamp', 'asc')
     );
-  }, [firestore, user]);
+  }, [firestore, user?.id]);
 
   const { data: messages, isLoading: isLoadingMessages } = useCollection<AdminMessage>(messagesQuery);
   const studentAvatar = PlaceHolderImages.find(p => p.id === 'student-avatar');
   const adminAvatar = PlaceHolderImages.find(p => p.id === 'admin-avatar');
 
   useEffect(() => {
-    // Scroll to bottom when new messages arrive
     if (scrollAreaRef.current) {
-        // A bit of a hack, but it works to scroll to the very bottom
         setTimeout(() => {
             const viewport = scrollAreaRef.current?.querySelector('div');
             if (viewport) {
@@ -94,10 +95,13 @@ export default function ContactAdminPage() {
 
     setIsGenerating(true);
     try {
+      const userId = user.id;
+      const userName = user.name || user.email || 'Student';
+      
       const result = await contactAdmin({
         problemDetails: problemDetails,
-        studentId: user.id,
-        studentName: user.name,
+        studentId: userId,
+        studentName: userName,
       });
       if (result?.messageToAdmin) {
         form.setValue('message', result.messageToAdmin);
@@ -118,18 +122,24 @@ export default function ContactAdminPage() {
       return;
     }
     setIsSubmitting(true);
+    
+    const userId = user.id;
+    const userName = user.name || user.email || 'Student';
+    
     const messageData = {
-      studentId: user.id,
-      studentName: user.name,
+      studentId: userId,
+      studentName: userName,
       message: data.message,
       isReply: false,
       timestamp: serverTimestamp(),
     };
+    
     try {
       await addDoc(collection(firestore, 'admin-messages'), messageData);
       toast({ title: 'Message Sent!', description: 'The administrator has been notified.' });
       form.reset({problemDetails: '', message: ''});
     } catch (error) {
+      console.error('Error sending message:', error);
       const permissionError = new FirestorePermissionError({
           path: 'admin-messages',
           operation: 'create',
@@ -143,6 +153,19 @@ export default function ContactAdminPage() {
   }
 
   const isLoading = isAuthLoading || isLoadingMessages;
+
+  if (!isAuthLoading && !user) {
+    return (
+      <div className="flex items-center justify-center h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Sign In Required</CardTitle>
+            <CardDescription>You must be signed in to contact the administrator.</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -163,11 +186,13 @@ export default function ContactAdminPage() {
             {isLoading && <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/></div>}
             {!isLoading && messages?.map(msg => {
                 const isStudent = !msg.isReply;
+                const displayName = user?.name || 'You';
+                
                 return (
                     <div key={msg.id} className={`flex items-start gap-3 my-4 ${isStudent ? 'justify-start' : 'flex-row-reverse'}`}>
                         <Avatar>
                             <AvatarImage src={isStudent ? studentAvatar?.imageUrl : adminAvatar?.imageUrl} />
-                            <AvatarFallback>{isStudent ? user?.name.charAt(0) : 'A'}</AvatarFallback>
+                            <AvatarFallback>{isStudent ? displayName.charAt(0) : 'A'}</AvatarFallback>
                         </Avatar>
 
                         <div className={`w-auto max-w-[75%] flex flex-col ${isStudent ? 'items-start' : 'items-end'}`}>
