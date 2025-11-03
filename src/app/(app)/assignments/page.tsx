@@ -175,7 +175,7 @@ function TeacherView() {
                         </div>
                     </div>
                     <div className='flex items-center gap-2'>
-                      <Button variant="ghost" size="icon" disabled>
+                      <Button variant="ghost" size="icon" disabled={!a.fileUrl} onClick={() => a.fileUrl && window.open(a.fileUrl, '_blank')}>
                           <Download className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon">
@@ -331,7 +331,7 @@ function StudentView() {
                     </Select>
                     </TableCell>
                     <TableCell className="text-right">
-                    <Button variant="outline" size="sm" disabled>
+                    <Button variant="outline" size="sm" disabled={!assignment.fileUrl} onClick={() => assignment.fileUrl && window.open(assignment.fileUrl, '_blank')}>
                         <Download className="h-4 w-4" />
                     </Button>
                     </TableCell>
