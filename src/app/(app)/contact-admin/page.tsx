@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Loader2, Send, Wand2 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp, query, where, orderBy } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -47,6 +47,7 @@ export default function ContactAdminPage() {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -68,6 +69,20 @@ export default function ContactAdminPage() {
   const { data: messages, isLoading: isLoadingMessages } = useCollection<AdminMessage>(messagesQuery);
   const studentAvatar = PlaceHolderImages.find(p => p.id === 'student-avatar');
   const adminAvatar = PlaceHolderImages.find(p => p.id === 'admin-avatar');
+
+  useEffect(() => {
+    // Scroll to bottom when new messages arrive
+    if (scrollAreaRef.current) {
+        // A bit of a hack, but it works to scroll to the very bottom
+        setTimeout(() => {
+            const viewport = scrollAreaRef.current?.querySelector('div');
+            if (viewport) {
+                viewport.scrollTop = viewport.scrollHeight;
+            }
+        }, 100);
+    }
+  }, [messages]);
+
 
   async function handleGenerateMessage() {
     if (!user) return;
@@ -113,7 +128,7 @@ export default function ContactAdminPage() {
     try {
       await addDoc(collection(firestore, 'admin-messages'), messageData);
       toast({ title: 'Message Sent!', description: 'The administrator has been notified.' });
-      form.reset();
+      form.reset({problemDetails: '', message: ''});
     } catch (error) {
       const permissionError = new FirestorePermissionError({
           path: 'admin-messages',
@@ -132,7 +147,7 @@ export default function ContactAdminPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Contact Administrator</h1>
+        <h1 className="text-2xl font-bold font-headline">Contact Administrator</h1>
         <p className="text-muted-foreground">
           Send a message to the school administration and view their replies.
         </p>
@@ -144,33 +159,26 @@ export default function ContactAdminPage() {
           <CardDescription>This is your private message history with the admin.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[300px] w-full space-y-4 pr-4">
-            {isLoading && <p>Loading messages...</p>}
+          <ScrollArea className="h-[300px] w-full space-y-4 pr-4" ref={scrollAreaRef}>
+            {isLoading && <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/></div>}
             {!isLoading && messages?.map(msg => {
                 const isStudent = !msg.isReply;
                 return (
-                    <div key={msg.id} className={`flex items-start gap-3 my-4 ${isStudent ? 'justify-start' : 'justify-end'}`}>
-                        {isStudent && (
-                             <Avatar>
-                                <AvatarImage src={studentAvatar?.imageUrl} />
-                                <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                        )}
-                        <div className={`w-auto max-w-[75%] ${isStudent ? 'text-left' : 'text-right'}`}>
-                            <div className={`flex items-baseline gap-2 ${isStudent ? 'justify-start' : 'justify-end'}`}>
-                                <p className="font-semibold">{isStudent ? msg.studentName : 'Admin'}</p>
+                    <div key={msg.id} className={`flex items-start gap-3 my-4 ${isStudent ? 'justify-start' : 'flex-row-reverse'}`}>
+                        <Avatar>
+                            <AvatarImage src={isStudent ? studentAvatar?.imageUrl : adminAvatar?.imageUrl} />
+                            <AvatarFallback>{isStudent ? user?.name.charAt(0) : 'A'}</AvatarFallback>
+                        </Avatar>
+
+                        <div className={`w-auto max-w-[75%] flex flex-col ${isStudent ? 'items-start' : 'items-end'}`}>
+                             <div className="flex items-baseline gap-2">
+                                <p className="font-semibold text-sm">{isStudent ? 'You' : 'Admin'}</p>
                                 <p className="text-xs text-muted-foreground">{msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
-                            <p className={`text-sm text-foreground p-3 rounded-lg mt-1 inline-block ${!isStudent ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                            <p className={`text-sm p-3 rounded-lg mt-1 inline-block ${!isStudent ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                                 {msg.message}
                             </p>
                         </div>
-                        {!isStudent && (
-                             <Avatar>
-                                <AvatarImage src={adminAvatar?.imageUrl} />
-                                <AvatarFallback>A</AvatarFallback>
-                            </Avatar>
-                        )}
                     </div>
                 )
             })}
@@ -186,7 +194,7 @@ export default function ContactAdminPage() {
                 name="problemDetails"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Describe your issue</FormLabel>
+                    <FormLabel>1. Describe your issue (for AI)</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="For example: 'I am unable to upload my assignment for the history class...'"
@@ -194,7 +202,7 @@ export default function ContactAdminPage() {
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>Let our AI assistant help you draft a message to the admin.</FormDescription>
+                    <FormDescription>Let our AI assistant help you draft a clear message to the admin.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -212,7 +220,7 @@ export default function ContactAdminPage() {
                 name="message"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Your Message to the Admin</FormLabel>
+                    <FormLabel>2. Your Message to the Admin</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Your generated or manually typed message will appear here."

@@ -1,18 +1,20 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, Inbox } from 'lucide-react';
 import { NotAuthorized } from '@/components/not-authorized';
 import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AdminMessage {
   id: string;
@@ -31,6 +33,7 @@ export default function MailboxPage() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [isReplying, setIsReplying] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -72,6 +75,17 @@ export default function MailboxPage() {
     return [...studentThreads[selectedStudentId].messages].sort((a, b) => a.timestamp?.toMillis() - b.timestamp?.toMillis());
   }, [selectedStudentId, studentThreads]);
   
+  useEffect(() => {
+    // When a new thread is selected, scroll to the bottom.
+    if (scrollAreaRef.current) {
+        setTimeout(() => {
+            const viewport = scrollAreaRef.current?.querySelector('div');
+            if (viewport) {
+                viewport.scrollTop = viewport.scrollHeight;
+            }
+        }, 100);
+    }
+  }, [selectedStudentId, selectedThreadMessages]);
 
   const handleSendReply = async () => {
       if (!firestore || !user || !selectedStudentId || !replyMessage.trim()) return;
@@ -104,7 +118,7 @@ export default function MailboxPage() {
 
 
   if (isAuthLoading || isLoadingMessages) {
-    return <Card><CardContent className="p-6">Loading mailbox...</CardContent></Card>;
+    return <Card><CardContent className="p-6 flex items-center justify-center h-[600px]"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> Loading mailbox...</CardContent></Card>;
   }
 
   if (user?.role !== 'admin') {
@@ -118,78 +132,83 @@ export default function MailboxPage() {
         <p className="text-muted-foreground">Review and respond to student inquiries.</p>
       </div>
 
-      <Card className="grid grid-cols-1 md:grid-cols-3 h-[600px]">
-        <div className="col-span-1 border-r overflow-y-auto">
-          <CardHeader>
+      <Card className="grid grid-cols-1 md:grid-cols-3 h-[70vh] min-h-[600px]">
+        <div className="col-span-1 border-r flex flex-col">
+          <CardHeader className="pb-2">
             <CardTitle>Conversations</CardTitle>
           </CardHeader>
-          <CardContent className="p-2">
-            <div className="flex flex-col gap-1">
-                {sortedStudentIds.map(studentId => {
-                    const thread = studentThreads[studentId];
-                    const lastMessage = thread.messages[0];
-                    return (
-                        <button
-                            key={studentId}
-                            onClick={() => setSelectedStudentId(studentId)}
-                            className={`w-full text-left p-3 rounded-lg hover:bg-muted ${selectedStudentId === studentId ? 'bg-muted' : ''}`}
-                        >
-                            <p className="font-semibold">{thread.studentName}</p>
-                            <p className="text-sm text-muted-foreground truncate">{lastMessage.isReply ? 'You: ' : ''}{lastMessage.message}</p>
-                            <p className="text-xs text-muted-foreground text-right mt-1">
-                                {lastMessage.timestamp?.toDate().toLocaleDateString()}
-                            </p>
-                        </button>
-                    )
-                })}
-                 {sortedStudentIds.length === 0 && <p className='p-4 text-center text-muted-foreground'>No messages yet.</p>}
-            </div>
-          </CardContent>
+          <ScrollArea className="flex-1">
+            <CardContent className="p-2">
+              <div className="flex flex-col gap-1">
+                  {sortedStudentIds.map(studentId => {
+                      const thread = studentThreads[studentId];
+                      const lastMessage = thread.messages[0];
+                      return (
+                          <button
+                              key={studentId}
+                              onClick={() => setSelectedStudentId(studentId)}
+                              className={cn(
+                                'w-full text-left p-3 rounded-lg hover:bg-muted transition-colors',
+                                selectedStudentId === studentId ? 'bg-muted' : ''
+                              )}
+                          >
+                              <p className="font-semibold">{thread.studentName}</p>
+                              <p className="text-sm text-muted-foreground truncate">{lastMessage.isReply ? 'You: ' : ''}{lastMessage.message}</p>
+                              <p className="text-xs text-muted-foreground text-right mt-1">
+                                  {lastMessage.timestamp?.toDate().toLocaleDateString()}
+                              </p>
+                          </button>
+                      )
+                  })}
+                  {sortedStudentIds.length === 0 && <p className='p-4 text-center text-muted-foreground'>No messages yet.</p>}
+              </div>
+            </CardContent>
+          </ScrollArea>
         </div>
 
-        <div className="col-span-2 flex flex-col">
+        <div className="col-span-2 flex flex-col bg-muted/20">
           {selectedStudentId ? (
             <>
-              <div className="flex-1 p-6 overflow-y-auto">
-                <h3 className="text-lg font-semibold mb-4">Conversation with {studentThreads[selectedStudentId].studentName}</h3>
+              <div className="border-b p-4">
+                 <h3 className="text-lg font-semibold">Conversation with {studentThreads[selectedStudentId].studentName}</h3>
+              </div>
+              <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
                 <div className="space-y-4">
                     {selectedThreadMessages.map(msg => {
                         const isStudent = !msg.isReply;
                         return (
-                             <div key={msg.id} className={`flex items-start gap-3 my-4 ${isStudent ? 'justify-start' : 'justify-end'}`}>
-                                {isStudent && (
-                                    <Avatar>
-                                        <AvatarImage src={studentAvatar?.imageUrl} />
-                                        <AvatarFallback>{msg.studentName.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                )}
-                                <div className={`w-auto max-w-[75%] ${isStudent ? 'text-left' : 'text-right'}`}>
-                                    <div className={`flex items-baseline gap-2 ${isStudent ? 'justify-start' : 'justify-end'}`}>
-                                        <p className="font-semibold">{isStudent ? msg.studentName : 'Admin'}</p>
+                             <div key={msg.id} className={`flex items-start gap-3 my-4 ${isStudent ? 'justify-start' : 'flex-row-reverse'}`}>
+                                <Avatar>
+                                    <AvatarImage src={isStudent ? studentAvatar?.imageUrl : adminAvatar?.imageUrl} />
+                                    <AvatarFallback>{isStudent ? msg.studentName.charAt(0) : 'A'}</AvatarFallback>
+                                </Avatar>
+                                <div className={`w-auto max-w-[75%] flex flex-col ${isStudent ? 'items-start' : 'items-end'}`}>
+                                     <div className="flex items-baseline gap-2">
+                                        <p className="font-semibold text-sm">{isStudent ? msg.studentName : 'You'}</p>
                                         <p className="text-xs text-muted-foreground">{msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                     </div>
-                                    <p className={`text-sm text-foreground bg-muted p-3 rounded-lg mt-1 inline-block ${!isStudent ? 'bg-primary text-primary-foreground' : ''}`}>
+                                    <p className={`text-sm text-foreground bg-background shadow-sm p-3 rounded-lg mt-1 inline-block ${!isStudent ? 'bg-primary text-primary-foreground' : ''}`}>
                                         {msg.message}
                                     </p>
                                 </div>
-                                {!isStudent && (
-                                    <Avatar>
-                                        <AvatarImage src={adminAvatar?.imageUrl} />
-                                        <AvatarFallback>A</AvatarFallback>
-                                    </Avatar>
-                                )}
                             </div>
                         )
                     })}
                 </div>
-              </div>
+              </ScrollArea>
               <div className="p-4 border-t bg-background">
                 <div className="relative">
                   <Textarea
-                    placeholder="Type your reply..."
+                    placeholder={`Reply to ${studentThreads[selectedStudentId].studentName}...`}
                     value={replyMessage}
                     onChange={(e) => setReplyMessage(e.target.value)}
                     className="pr-20"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendReply();
+                      }
+                    }}
                   />
                   <Button
                     size="sm"
@@ -198,13 +217,15 @@ export default function MailboxPage() {
                     disabled={isReplying || !replyMessage.trim()}
                   >
                     {isReplying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <span className="sr-only">Send</span>
                   </Button>
                 </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <p>Select a conversation to view messages.</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4">
+              <Inbox className="h-16 w-16 text-muted-foreground/50"/>
+              <p className="text-lg">Select a conversation to view messages.</p>
             </div>
           )}
         </div>
