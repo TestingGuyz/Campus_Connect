@@ -12,6 +12,7 @@ import {
 import { useAuth, User, AuthClaims } from '@/hooks/use-auth';
 import { Icons } from '@/components/icons';
 import { User as UserIcon, Shield } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -60,12 +61,12 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-[url(/grid.svg)] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
         <div className="relative flex flex-col items-center justify-center">
             <Card className="w-full max-w-md shadow-2xl">
-                <CardHeader className="text-center">
-                <div className="mx-auto mb-4 bg-primary/10 p-3 rounded-full">
-                    <Icons.logo className="h-10 w-10 text-primary" />
+                <CardHeader className="text-center items-center">
+                <div className="mx-auto mb-4 bg-background p-3 rounded-full border">
+                    <Image src="https://www.mpbfoundationhsschool.com/images/logo.png" alt="School Logo" width={60} height={60} />
                 </div>
-                <CardTitle className="text-3xl font-bold">Welcome to CampusConnect</CardTitle>
-                <CardDescription>The all-in-one platform for modern education.</CardDescription>
+                <CardTitle className="text-3xl font-bold">M.P. Birla Foundation</CardTitle>
+                <CardDescription>H.S. School Student Portal</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 gap-4 p-6">
                 <Button size="lg" className="w-full" onClick={() => handleLogin('student')}>
