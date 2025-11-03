@@ -118,7 +118,10 @@ export function useCollection<T = any>(
     throw new Error('useCollection query was not properly memoized using useMemoFirebase. This can cause infinite loops.');
   }
 
+  // The hook is loading if auth is loading OR if the hook itself is loading (waiting for the query).
+  // The query will only start after auth is no longer loading.
   const isLoading = isAuthLoading || isHookLoading;
   
   return { data, isLoading, error };
 }
+
