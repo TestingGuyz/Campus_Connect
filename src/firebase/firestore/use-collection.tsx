@@ -41,7 +41,7 @@ export interface InternalQuery extends Query<DocumentData> {
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
  * Handles nullable references/queries.
- * 
+ *
  * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
  * use useMemoFirebase to memoize it per React guidence.  Also make sure that it's dependencies are stable
  * references.
@@ -49,7 +49,7 @@ export interface InternalQuery extends Query<DocumentData> {
  * This hook will only attempt to fetch data if the provided query is not null AND after authentication is resolved.
  * It is the responsibility of the calling component to ensure the query is null
  * until all necessary dependencies (like user ID) are available.
- *  
+ *
  * @template T Optional type for document data. Defaults to any.
  * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} targetRefOrQuery -
  * The Firestore CollectionReference or Query. Hook waits if this is null/undefined.
@@ -77,7 +77,7 @@ export function useCollection<T = any>(
       setError(null);
       return;
     }
-    
+
     // At this point, auth is done, we have a user, and we have a query. Start loading.
     setIsHookLoading(true);
 
@@ -113,13 +113,13 @@ export function useCollection<T = any>(
 
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery, user, isAuthLoading]); // user and isAuthLoading are critical dependencies
-  
+
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error('useCollection query was not properly memoized using useMemoFirebase. This can cause infinite loops.');
   }
 
   // The overall loading state is true if auth is still resolving OR if the hook is actively fetching data after auth is done.
   const isLoading = isAuthLoading || isHookLoading;
-  
+
   return { data, isLoading, error };
 }
