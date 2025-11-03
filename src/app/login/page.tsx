@@ -5,11 +5,13 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { useAuth, User, AuthClaims } from '@/hooks/use-auth';
 import { Icons } from '@/components/icons';
+import { User as UserIcon, Shield } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -54,27 +56,34 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <Icons.logo className="h-12 w-12 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-headline">CampusConnect</CardTitle>
-          <CardDescription>Select a role to access the dashboard</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Button className="w-full" onClick={() => handleLogin('admin')}>
-            Login as Admin
-          </Button>
-          <Button variant="secondary" className="w-full" onClick={() => handleLogin('teacher')}>
-            Login as Teacher
-          </Button>
-          <Button variant="outline" className="w-full" onClick={() => handleLogin('student')}>
-            Login as Student
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background">
+        <div className="absolute inset-0 bg-[url(/grid.svg)] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+        <div className="relative flex flex-col items-center justify-center">
+            <Card className="w-full max-w-md shadow-2xl">
+                <CardHeader className="text-center">
+                <div className="mx-auto mb-4 bg-primary/10 p-3 rounded-full">
+                    <Icons.logo className="h-10 w-10 text-primary" />
+                </div>
+                <CardTitle className="text-3xl font-bold">Welcome to CampusConnect</CardTitle>
+                <CardDescription>The all-in-one platform for modern education.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-4 p-6">
+                <Button size="lg" className="w-full" onClick={() => handleLogin('student')}>
+                    <UserIcon className="mr-2 h-5 w-5" />
+                    Login as Student
+                </Button>
+                <Button size="lg" variant="secondary" className="w-full" onClick={() => handleLogin('teacher')}>
+                    Login as Teacher
+                </Button>
+                </CardContent>
+                <CardFooter className="p-6 pt-0">
+                    <Button variant="ghost" className="w-full" onClick={() => handleLogin('admin')}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Administrator Access
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
     </div>
   );
 }

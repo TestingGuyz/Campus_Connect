@@ -1,11 +1,10 @@
-
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Upload, FileText, Trash2 } from 'lucide-react';
+import { Download, Upload, FileText, Trash2, Edit } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -120,11 +119,11 @@ function TeacherView() {
     }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <Card>
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <Card className="lg:col-span-1">
         <CardHeader>
           <CardTitle>Create New Assignment</CardTitle>
-          <CardDescription>Upload assignments and set deadlines for students.</CardDescription>
+          <CardDescription>Fill out the form to create and distribute a new assignment.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -150,7 +149,7 @@ function TeacherView() {
               </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="file">File (Optional)</Label>
+            <Label htmlFor="file">Attach File (Optional)</Label>
             <Input id="file" type="file" />
           </div>
           <Button className="w-full" onClick={handleCreateAssignment}>
@@ -159,33 +158,36 @@ function TeacherView() {
           </Button>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="lg:col-span-2">
         <CardHeader>
           <CardTitle>Uploaded Assignments</CardTitle>
           <CardDescription>A list of assignments you have already created.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {assignments?.map(a => (
-                <li key={a.id} className="flex items-center justify-between rounded-md border p-3">
-                    <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
+                <li key={a.id} className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="flex items-center gap-4">
+                        <FileText className="h-6 w-6 text-primary" />
                         <div>
                             <p className="font-medium">{a.title}</p>
-                            <p className="text-sm text-muted-foreground">{a.subject} | {a.classId}{a.sectionId} - Due: {a.dueDate}</p>
+                            <p className="text-sm text-muted-foreground">{a.subject} | Class {a.classId}{a.sectionId} - Due: {a.dueDate}</p>
                         </div>
                     </div>
                     <div className='flex items-center gap-2'>
                       <Button variant="ghost" size="icon" disabled>
                           <Download className="h-4 w-4" />
                       </Button>
-                      <Button variant="destructive" size="icon" onClick={() => handleDeleteAssignment(a.id)}>
+                      <Button variant="ghost" size="icon">
+                          <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteAssignment(a.id)}>
                           <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                 </li>
             ))}
-             {assignments?.length === 0 && <p className="text-sm text-muted-foreground">No assignments found.</p>}
+             {assignments?.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No assignments created yet.</p>}
           </ul>
         </CardContent>
       </Card>
@@ -318,13 +320,13 @@ function StudentView() {
                         defaultValue={assignment.priority}
                         onValueChange={(value) => handleStudentAssignmentChange(assignment.id, (assignment as any).studentAssignmentId, 'priority', value)}
                     >
-                        <SelectTrigger className="w-[100px] h-8 text-xs">
-                        <SelectValue placeholder="Priority" />
+                        <SelectTrigger className="w-[120px] h-8 text-xs focus:ring-0 border-0 bg-transparent">
+                            <SelectValue placeholder="Priority" />
                         </SelectTrigger>
                         <SelectContent>
-                        <SelectItem value="High"><Badge variant={getPriorityBadgeVariant("High")}>High</Badge></SelectItem>
-                        <SelectItem value="Medium"><Badge variant={getPriorityBadgeVariant("Medium")}>Medium</Badge></SelectItem>
-                        <SelectItem value="Low"><Badge variant={getPriorityBadgeVariant("Low")}>Low</Badge></SelectItem>
+                        <SelectItem value="High"><Badge variant={getPriorityBadgeVariant("High")}>High Priority</Badge></SelectItem>
+                        <SelectItem value="Medium"><Badge variant={getPriorityBadgeVariant("Medium")}>Medium Priority</Badge></SelectItem>
+                        <SelectItem value="Low"><Badge variant={getPriorityBadgeVariant("Low")}>Low Priority</Badge></SelectItem>
                         </SelectContent>
                     </Select>
                     </TableCell>
@@ -337,8 +339,8 @@ function StudentView() {
                 ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        No assignments found for your class.
+                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                        No assignments found for your class. Great job staying on top of your work!
                     </TableCell>
                 </TableRow>
             )}
@@ -357,7 +359,7 @@ export default function AssignmentsPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                <h1 className="text-2xl font-headline font-bold">Assignments</h1>
+                <h1 className="text-3xl font-bold">Assignments</h1>
                 <p className="text-muted-foreground">Loading...</p>
                 </div>
             </div>
@@ -374,11 +376,11 @@ export default function AssignmentsPage() {
     <div className="space-y-6">
        <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-headline font-bold">
+          <h1 className="text-3xl font-bold">
             {canManageAssignments ? 'Assignments Management' : 'Assignments To-Do'}
           </h1>
           <p className="text-muted-foreground">
-            {canManageAssignments ? 'Manage and distribute assignments.' : 'Track and submit your work.'}
+            {canManageAssignments ? 'Manage and distribute assignments for your classes.' : 'Track and submit your work on time.'}
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, BookOpen, Check, Users, CalendarCheck } from 'lucide-react';
+import { Activity, BookOpen, Users, CalendarCheck, BarChart2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -17,7 +17,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import type { ChartConfig } from '@/components/ui/chart';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -40,7 +40,7 @@ const chartConfig = {
   },
   assignments: {
     label: "Assignments",
-    color: "hsl(var(--secondary))",
+    color: "hsl(var(--primary) / 0.3)",
   },
 } satisfies ChartConfig;
 
@@ -88,7 +88,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-headline font-bold">Admin Dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -100,21 +99,21 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">1,234</div>
             <p className="text-xs text-muted-foreground">
-              +20.1% from last month
+              +2.1% from last month
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Assignments Graded
+              Active Staff
             </CardTitle>
-            <Check className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+573</div>
+            <div className="text-2xl font-bold">52</div>
             <p className="text-xs text-muted-foreground">
-              +201 since last hour
+              +5 since last hour
             </p>
           </CardContent>
         </Card>
@@ -135,14 +134,14 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-                Active Staff
+                Attendance Rate
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <BarChart2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">52</div>
+            <div className="text-2xl font-bold">94.5%</div>
             <p className="text-xs text-muted-foreground">
-              Online now
+              +0.5% from yesterday
             </p>
           </CardContent>
         </Card>
@@ -151,7 +150,8 @@ export default function AdminDashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>Overview</CardTitle>
+            <CardTitle>School Activity Overview</CardTitle>
+            <CardDescription>A summary of attendance and assignments over the past 6 months.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
@@ -170,13 +170,13 @@ export default function AdminDashboard() {
                   content={<ChartTooltipContent indicator="dot" />}
                 />
                  <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="attendance" fill="var(--color-attendance)" radius={4} />
-                <Bar dataKey="assignments" fill="var(--color-assignments)" radius={4} />
+                <Bar dataKey="attendance" fill="var(--color-attendance)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="assignments" fill="var(--color-assignments)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
-        <div className="lg:col-span-3 grid gap-6">
+        <div className="lg:col-span-3 grid gap-6 auto-rows-max">
             <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><CalendarCheck className="text-destructive"/> High-Priority Events</CardTitle>
@@ -202,19 +202,20 @@ export default function AdminDashboard() {
             <Card>
             <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>A log of recent student and staff actions.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableBody>
                         {recentActivities.map((activity, index) => (
                             <TableRow key={index}>
-                                <TableCell>
+                                <TableCell className='p-2'>
                                     <div className="font-medium">{activity.student}</div>
                                     <div className="hidden text-sm text-muted-foreground md:inline">
                                         {activity.activity}
                                     </div>
                                 </TableCell>
-                                <TableCell className="text-right">{activity.time}</TableCell>
+                                <TableCell className="text-right p-2">{activity.time}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
