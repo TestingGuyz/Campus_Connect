@@ -29,6 +29,7 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
   const { user, isAuthLoading } = useAuth();
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesQuery = useMemoFirebase(
     () => {
@@ -68,6 +69,13 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
             requestResourceData: messageData
         });
         errorEmitter.emit('permission-error', permissionError);
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setNewMessage(`File attached: ${file.name}`);
     }
   };
   
@@ -122,8 +130,14 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
             onChange={(e) => setNewMessage(e.target.value)}
             disabled={!user}
           />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
+          />
           <div className="absolute inset-y-0 right-0 flex items-center">
-            <Button type="button" variant="ghost" size="icon">
+            <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
               <Paperclip className="h-4 w-4" />
             </Button>
             <Button type="submit" variant="ghost" size="icon" disabled={!user || !newMessage.trim()}>
@@ -137,7 +151,7 @@ const GroupChat = ({ groupName }: { groupName: string }) => {
 };
 
 export default function GroupsPage() {
-    const { isAuthLoading } = useAuth();
+    const { isAuthLoading, user } = useAuth();
 
     if(isAuthLoading) {
         return (
@@ -162,8 +176,8 @@ export default function GroupsPage() {
           <Tabs defaultValue="teachers" className="w-full">
             <div className="border-b">
                 <TabsList className="grid w-full grid-cols-2 bg-muted/40 h-auto rounded-none p-2">
-                    <TabsTrigger value="teachers" className="py-2">Teachers</TabsTrigger>
-                    <TabsTrigger value="parents" className="py-2">Parents</TabsTrigger>
+                    <TabsTrigger value="teachers" className="py-2" disabled={!user}>Teachers</TabsTrigger>
+                    <TabsTrigger value="parents" className="py-2" disabled={!user}>Parents</TabsTrigger>
                 </TabsList>
             </div>
             <TabsContent value="teachers">
