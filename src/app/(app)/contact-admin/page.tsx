@@ -1,4 +1,5 @@
 'use client';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -19,7 +20,6 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { contactAdmin } from '@/ai/flows/contact-admin-flow';
-
 
 const FormSchema = z.object({
   problemDetails: z.string().min(10, {
@@ -127,22 +127,24 @@ export default function ContactAdminPage() {
       timestamp: serverTimestamp(),
     };
     
-    try {
-      await addDoc(collection(firestore, 'admin-messages'), messageData);
-      toast({ title: 'Message Sent!', description: 'The administrator has been notified.' });
-      form.reset({problemDetails: '', message: ''});
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const permissionError = new FirestorePermissionError({
-          path: 'admin-messages',
-          operation: 'create',
-          requestResourceData: messageData
+    addDoc(collection(firestore, 'admin-messages'), messageData)
+      .then(() => {
+        toast({ title: 'Message Sent!', description: 'The administrator has been notified.' });
+        form.reset({problemDetails: '', message: ''});
+      })
+      .catch((error) => {
+        console.error('Error sending message:', error);
+        const permissionError = new FirestorePermissionError({
+            path: 'admin-messages',
+            operation: 'create',
+            requestResourceData: messageData
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({ variant: 'destructive', title: 'Submission Failed', description: 'Could not send your message.' });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
-      errorEmitter.emit('permission-error', permissionError);
-      toast({ variant: 'destructive', title: 'Submission Failed', description: 'Could not send your message.' });
-    } finally {
-      setIsSubmitting(false);
-    }
   }
 
   const isLoading = isAuthLoading || isLoadingMessages;

@@ -79,6 +79,12 @@ export default function MailboxPage() {
   }, [selectedStudentId, studentThreads]);
   
   useEffect(() => {
+    if (!isLoadingMessages && sortedStudentIds.length > 0 && !selectedStudentId) {
+        setSelectedStudentId(sortedStudentIds[0]);
+    }
+  }, [isLoadingMessages, sortedStudentIds, selectedStudentId]);
+
+  useEffect(() => {
     if (scrollAreaRef.current) {
         setTimeout(() => {
             const viewport = scrollAreaRef.current?.querySelector('div');
@@ -101,21 +107,23 @@ export default function MailboxPage() {
           timestamp: serverTimestamp(),
       };
 
-      try {
-          await addDoc(collection(firestore, 'admin-messages'), replyData);
-          toast({ title: "Reply Sent!" });
-          setReplyMessage('');
-      } catch (error) {
-          const permissionError = new FirestorePermissionError({
-              path: 'admin-messages',
-              operation: 'create',
-              requestResourceData: replyData
-          });
-          errorEmitter.emit('permission-error', permissionError);
-          toast({ variant: 'destructive', title: "Failed to send reply." });
-      } finally {
-          setIsReplying(false);
-      }
+      addDoc(collection(firestore, 'admin-messages'), replyData)
+        .then(() => {
+            toast({ title: "Reply Sent!" });
+            setReplyMessage('');
+        })
+        .catch((error) => {
+            const permissionError = new FirestorePermissionError({
+                path: 'admin-messages',
+                operation: 'create',
+                requestResourceData: replyData
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({ variant: 'destructive', title: "Failed to send reply." });
+        })
+        .finally(() => {
+            setIsReplying(false);
+        });
   }
 
 

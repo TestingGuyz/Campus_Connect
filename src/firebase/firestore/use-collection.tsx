@@ -124,4 +124,3 @@ export function useCollection<T = any>(
   
   return { data, isLoading, error };
 }
-
