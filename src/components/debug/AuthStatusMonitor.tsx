@@ -84,22 +84,22 @@ export function AuthStatusMonitor() {
       )}
 
       {/* Console Section */}
-      <div className="border-t border-neutral-700 p-3">
-         <button 
+      <div className="flex w-full items-center justify-between text-left border-t border-neutral-700 p-3">
+        <button 
           onClick={() => setIsConsoleVisible(!isConsoleVisible)} 
-          className="flex w-full items-center justify-between text-left"
+          className="flex flex-1 items-center gap-2"
         >
-          <div className="flex items-center gap-2">
-            <TerminalSquare className="h-4 w-4" />
-            <span className="font-bold">Live Console</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" className="h-6 w-6 text-white" onClick={(e) => {e.stopPropagation(); setLogs([])}}>
-                <X className="h-4 w-4" />
-            </Button>
-            {isConsoleVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </div>
+          <TerminalSquare className="h-4 w-4" />
+          <span className="font-bold">Live Console</span>
         </button>
+        <div className="flex items-center gap-2">
+          <Button size="icon" variant="ghost" className="h-6 w-6 text-white" onClick={(e) => {e.stopPropagation(); setLogs([])}}>
+              <X className="h-4 w-4" />
+          </Button>
+          <button onClick={() => setIsConsoleVisible(!isConsoleVisible)}>
+            {isConsoleVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
       {isConsoleVisible && (
         <ScrollArea className="h-[200px] bg-black/20 p-3 font-mono text-xs">
