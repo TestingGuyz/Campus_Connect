@@ -2,6 +2,7 @@
 import { useAuth } from '@/hooks/use-auth';
 import AdminDashboard from '@/components/dashboard/admin-dashboard';
 import StudentDashboard from '@/components/dashboard/student-dashboard';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function DashboardPage() {
   const { user, isAuthLoading } = useAuth();
@@ -18,9 +19,11 @@ export default function DashboardPage() {
     )
   }
   
+  const DashboardComponent = user?.role === 'admin' || user?.role === 'teacher' ? AdminDashboard : StudentDashboard;
+
   return (
-    <>
-      {user?.role === 'admin' || user?.role === 'teacher' ? <AdminDashboard /> : <StudentDashboard />}
-    </>
+      <div className="space-y-6">
+        <DashboardComponent />
+      </div>
   );
 }

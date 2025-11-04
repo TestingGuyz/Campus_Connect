@@ -147,7 +147,7 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-7">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>School Activity Overview</CardTitle>
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
             </ChartContainer>
           </CardContent>
         </Card>
-        <div className="lg:col-span-3 grid gap-6 auto-rows-max">
+        <div className="lg:col-span-3 grid grid-cols-1 gap-6 auto-rows-max">
             <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><CalendarCheck className="text-destructive"/> High-Priority Events</CardTitle>
