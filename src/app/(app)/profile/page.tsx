@@ -70,19 +70,19 @@ export default function ProfilePage() {
       <Card className="overflow-hidden">
         <CardHeader className="p-0 relative">
           <div
-            className="absolute top-0 left-0 right-0 h-40 bg-cover bg-center"
+            className="absolute top-0 left-0 right-0 h-28 sm:h-40 bg-cover bg-center"
             style={{ backgroundImage: `url(${PlaceHolderImages.find(img => img.id === 'profile-banner')?.imageUrl})` }}
             data-ai-hint={PlaceHolderImages.find(img => img.id === 'profile-banner')?.imageHint}
           ><div className="absolute inset-0 bg-black/20"></div></div>
-          <div className="relative flex flex-col sm:flex-row items-center pt-24 p-6 gap-6">
-            <Avatar className="h-32 w-32 border-4 border-background z-10">
+          <div className="relative flex flex-col sm:flex-row items-center pt-16 sm:pt-24 p-6 gap-6">
+            <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background z-10">
               <AvatarImage src={studentAvatar?.imageUrl} data-ai-hint={studentAvatar?.imageHint} />
               <AvatarFallback className="text-4xl">{user?.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="text-center sm:text-left z-10 flex-grow">
-              <CardTitle className="text-3xl font-bold">{profileUser.name}</CardTitle>
-              <CardDescription className="text-lg text-muted-foreground">{profileUser.class}</CardDescription>
-              <div className="flex gap-4 mt-2 justify-center sm:justify-start">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">{profileUser.name}</CardTitle>
+              <CardDescription className="text-md sm:text-lg text-muted-foreground">{profileUser.class}</CardDescription>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-2 justify-center sm:justify-start">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4"/> {profileUser.email}</div>
               </div>
             </div>

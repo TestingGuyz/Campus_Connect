@@ -90,7 +90,7 @@ function StudentTimetableView() {
 
     return (
         <div className="w-full overflow-x-auto">
-            <Table>
+            <Table className="min-w-[800px]">
                 <TableHeader>
                     <TableRow>
                         <TableHead className="w-[120px]">Time</TableHead>
@@ -211,7 +211,7 @@ function TeacherAdminTimetableView() {
                 <CardContent>
                     {isLoading ? <Skeleton className="h-[400px] w-full" /> : (
                         <div className="w-full overflow-x-auto">
-                            <Table>
+                            <Table className="min-w-[900px]">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[120px] min-w-[120px]">Time</TableHead>

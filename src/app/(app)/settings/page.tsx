@@ -62,7 +62,7 @@ function AdminSettings() {
                         <Label htmlFor="student-name">Student Full Name</Label>
                         <Input id="student-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Jane Doe" />
                     </div>
-                    <div className='grid grid-cols-2 gap-4'>
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                         <div className="space-y-2">
                             <Label htmlFor="student-class">Class</Label>
                             <Input id="student-class" value={classId} onChange={(e) => setClassId(e.target.value)} placeholder="e.g., 10" />
@@ -144,15 +144,15 @@ export default function SettingsPage() {
           <CardDescription>Manage your notification preferences.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5 mb-2 sm:mb-0">
                   <Label htmlFor="email-notifications" className="text-base">Email Notifications</Label>
                   <p className="text-sm text-muted-foreground">Receive notifications about assignments and announcements via email.</p>
               </div>
               <Switch id="email-notifications" />
           </div>
-           <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
+           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5 mb-2 sm:mb-0">
                   <Label htmlFor="push-notifications" className="text-base">Push Notifications</Label>
                    <p className="text-sm text-muted-foreground">Get push notifications on your devices.</p>
               </div>
@@ -167,15 +167,15 @@ export default function SettingsPage() {
           <CardDescription>These actions are irreversible.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-           <div className="flex items-center justify-between rounded-lg border border-destructive p-4">
-              <div className="space-y-0.5">
+           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border border-destructive p-4">
+              <div className="space-y-0.5 mb-2 sm:mb-0">
                   <h4 className="font-medium">Log out</h4>
                   <p className="text-sm text-muted-foreground">You will be returned to the login screen.</p>
               </div>
               <Button variant="outline" onClick={logout}>Log Out</Button>
           </div>
-          <div className="flex items-center justify-between rounded-lg border border-destructive p-4">
-              <div className="space-y-0.5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border border-destructive p-4">
+              <div className="space-y-0.5 mb-2 sm:mb-0">
                   <h4 className="font-medium text-destructive">Delete Account</h4>
                   <p className="text-sm text-muted-foreground">Permanently delete your account and all associated data.</p>
               </div>

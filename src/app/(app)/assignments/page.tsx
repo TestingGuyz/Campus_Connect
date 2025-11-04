@@ -138,7 +138,7 @@ function TeacherView() {
             <Label htmlFor="dueDate">Due Date</Label>
             <Input id="dueDate" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                   <Label htmlFor="classId">Class</Label>
                   <Input id="classId" placeholder="e.g., 10" value={classId} onChange={e => setClassId(e.target.value)} />
@@ -164,31 +164,33 @@ function TeacherView() {
           <CardDescription>A list of assignments you have already created.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-3">
-            {assignments?.map(a => (
-                <li key={a.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border p-4 gap-4">
-                    <div className="flex items-center gap-4">
-                        <FileText className="h-6 w-6 text-primary" />
-                        <div>
-                            <p className="font-medium">{a.title}</p>
-                            <p className="text-sm text-muted-foreground">{a.subject} | Class {a.classId}{a.sectionId} - Due: {a.dueDate}</p>
-                        </div>
-                    </div>
-                    <div className='flex items-center gap-2 shrink-0'>
-                      <Button variant="ghost" size="icon" disabled={!a.fileUrl} onClick={() => a.fileUrl && window.open(a.fileUrl, '_blank')}>
-                          <Download className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                          <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteAssignment(a.id)}>
-                          <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                </li>
-            ))}
-             {assignments?.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No assignments created yet.</p>}
-          </ul>
+          <div className="overflow-x-auto">
+            <ul className="space-y-3 min-w-[500px]">
+              {assignments?.map(a => (
+                  <li key={a.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border p-4 gap-4">
+                      <div className="flex items-center gap-4">
+                          <FileText className="h-6 w-6 text-primary" />
+                          <div>
+                              <p className="font-medium">{a.title}</p>
+                              <p className="text-sm text-muted-foreground">{a.subject} | Class {a.classId}{a.sectionId} - Due: {a.dueDate}</p>
+                          </div>
+                      </div>
+                      <div className='flex items-center gap-2 shrink-0'>
+                        <Button variant="ghost" size="icon" disabled={!a.fileUrl} onClick={() => a.fileUrl && window.open(a.fileUrl, '_blank')}>
+                            <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon">
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteAssignment(a.id)}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                  </li>
+              ))}
+              {assignments?.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No assignments created yet.</p>}
+            </ul>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -292,13 +294,13 @@ function StudentView() {
       </CardHeader>
       <CardContent>
         <div className="w-full overflow-x-auto">
-            <Table>
+            <Table className="min-w-[600px]">
             <TableHeader>
                 <TableRow>
                 <TableHead className="w-[50px]"></TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead className="hidden sm:table-cell">Subject</TableHead>
-                <TableHead className="hidden md:table-cell">Due Date</TableHead>
+                <TableHead>Subject</TableHead>
+                <TableHead>Due Date</TableHead>
                 <TableHead>Priority</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -314,8 +316,8 @@ function StudentView() {
                         />
                         </TableCell>
                         <TableCell className={`font-medium ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.title}</TableCell>
-                        <TableCell className={`hidden sm:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.subject}</TableCell>
-                        <TableCell className={`hidden md:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.dueDate}</TableCell>
+                        <TableCell className={`${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.subject}</TableCell>
+                        <TableCell className={`${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.dueDate}</TableCell>
                         <TableCell>
                         <Select 
                             defaultValue={assignment.priority}
