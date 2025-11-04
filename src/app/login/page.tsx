@@ -63,7 +63,7 @@ export default function LoginPage() {
             <Card className="w-full max-w-md shadow-2xl">
                 <CardHeader className="text-center items-center">
                 <div className="mx-auto mb-4 bg-background p-3 rounded-full border">
-                    <Image src="https://www.mpbfoundationhsschool.com/images/logo.png" alt="School Logo" width={60} height={60} />
+                    <Icons.logo width={60} height={60} />
                 </div>
                 <CardTitle className="text-3xl font-bold">M.P. Birla Foundation</CardTitle>
                 <CardDescription>H.S. School Student Portal</CardDescription>

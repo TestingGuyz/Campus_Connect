@@ -91,7 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-              <Icons.logo className="h-8 w-8" />
+              <Icons.logo width={32} height={32} />
               <span className="font-bold">CampusConnect</span>
             </Link>
           </div>
@@ -112,7 +112,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <SheetContent side="left" className="flex flex-col">
               <SheetTitle className="sr-only">Navigation</SheetTitle>
               <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold mb-4">
-                 <Icons.logo className="h-8 w-8" />
+                 <Icons.logo width={32} height={32} />
                 <span className="font-bold">CampusConnect</span>
               </Link>
               <NavLinks isMobile />
