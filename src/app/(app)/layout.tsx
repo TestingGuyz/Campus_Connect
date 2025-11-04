@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
 import { AuthStatusMonitor } from '@/components/debug/AuthStatusMonitor';
 
@@ -51,11 +51,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const filteredNavItems = user ? navItems.filter(item => item.roles.includes(user.role)) : [];
   
-  const handleLinkClick = (href: string) => {
-    router.push(href);
-    setMobileNavOpen(false);
-  }
-
   const NavLinks = () => (
     <nav className="grid items-start px-2 text-sm font-medium lg:px-4 gap-1">
       {filteredNavItems.map(({ href, label, icon: Icon }) => (
@@ -99,6 +94,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
+               <SheetTitle className="sr-only">Main Menu</SheetTitle>
+               <SheetDescription className="sr-only">
+                A list of navigation links for the application.
+               </SheetDescription>
                <div className="flex h-14 items-center border-b px-4">
                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold" onClick={() => setMobileNavOpen(false)}>
                     <Icons.logo width={28} height={28} />
