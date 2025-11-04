@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookCheck, BookMarked, CalendarCheck, CalendarDays, TrendingUp } from 'lucide-react';
+import { ArrowRight, BookMarked, CalendarCheck, CalendarDays, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -155,7 +155,7 @@ export default function StudentDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">

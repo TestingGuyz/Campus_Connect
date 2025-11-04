@@ -6,8 +6,8 @@ export const Icons = {
     <Image 
         src="https://www.mpbfoundationhsschool.com/images/logo.png" 
         alt="M.P. Birla Foundation H.S. School Logo"
-        width={40}
-        height={40}
+        width={props.width || 40}
+        height={props.height || 40}
         {...props} 
     />
   ),
