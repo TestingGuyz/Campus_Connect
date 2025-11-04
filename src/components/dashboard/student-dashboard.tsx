@@ -92,7 +92,7 @@ export default function StudentDashboard() {
         <p className="text-muted-foreground">Here's your summary for today. Keep up the great work!</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -155,7 +155,7 @@ export default function StudentDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
