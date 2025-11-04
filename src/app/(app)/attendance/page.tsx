@@ -36,64 +36,66 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-headline font-bold">Attendance</h1>
           <p className="text-muted-foreground">
             Mark attendance for Class 10A for today, {new Date().toLocaleDateString()}.
           </p>
         </div>
-        <Button>
+        <Button className="mt-4 sm:mt-0">
           <Save className="mr-2 h-4 w-4" /> Save Attendance
         </Button>
       </div>
       <Card>
         <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead className="text-center w-[400px]">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map(student => {
-                const studentAvatar = PlaceHolderImages.find(img => img.id === 'student-avatar');
-                return (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={studentAvatar?.imageUrl} data-ai-hint={studentAvatar?.imageHint} />
-                          <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{student.name}</div>
-                          <div className="text-sm text-muted-foreground">{student.id}</div>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[600px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student</TableHead>
+                  <TableHead className="text-center w-[400px]">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {students.map(student => {
+                  const studentAvatar = PlaceHolderImages.find(img => img.id === 'student-avatar');
+                  return (
+                    <TableRow key={student.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={studentAvatar?.imageUrl} data-ai-hint={studentAvatar?.imageHint} />
+                            <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-sm text-muted-foreground">{student.id}</div>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <RadioGroup defaultValue="present" className="flex justify-center space-x-8">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="present" id={`${student.id}-present`} />
-                          <Label htmlFor={`${student.id}-present`}>Present</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="absent" id={`${student.id}-absent`} />
-                          <Label htmlFor={`${student.id}-absent`}>Absent</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="late" id={`${student.id}-late`} />
-                          <Label htmlFor={`${student.id}-late`}>Late</Label>
-                        </div>
-                      </RadioGroup>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                      <TableCell>
+                        <RadioGroup defaultValue="present" className="flex justify-center space-x-2 sm:space-x-8">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="present" id={`${student.id}-present`} />
+                            <Label htmlFor={`${student.id}-present`}>Present</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="absent" id={`${student.id}-absent`} />
+                            <Label htmlFor={`${student.id}-absent`}>Absent</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="late" id={`${student.id}-late`} />
+                            <Label htmlFor={`${student.id}-late`}>Late</Label>
+                          </div>
+                        </RadioGroup>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

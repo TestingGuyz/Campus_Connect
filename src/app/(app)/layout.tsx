@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
 import { AuthStatusMonitor } from '@/components/debug/AuthStatusMonitor';
 
@@ -56,31 +56,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setMobileNavOpen(false);
   }
 
-  const NavLinks = ({isMobile = false}: {isMobile?: boolean}) => (
-    <nav className={`grid items-start px-2 text-sm font-medium ${isMobile ? 'gap-2' : 'lg:px-4 gap-1'}`}>
+  const NavLinks = () => (
+    <nav className="grid items-start px-2 text-sm font-medium lg:px-4 gap-1">
       {filteredNavItems.map(({ href, label, icon: Icon }) => (
-        isMobile ? (
-          <Button
-            key={href}
-            variant={pathname.startsWith(href) ? 'secondary' : 'ghost'}
-            className="justify-start gap-3 px-3 py-2"
-            onClick={() => handleLinkClick(href)}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </Button>
-        ) : (
-          <Link
-            key={href}
-            href={href}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary ${
-              pathname.startsWith(href) ? 'bg-muted text-primary' : 'text-muted-foreground'
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </Link>
-        )
+        <Link
+          key={href}
+          href={href}
+          onClick={() => mobileNavOpen && setMobileNavOpen(false)}
+          className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary ${
+            pathname.startsWith(href) ? 'bg-muted text-primary' : 'text-muted-foreground'
+          }`}
+        >
+          <Icon className="h-4 w-4" />
+          {label}
+        </Link>
       ))}
     </nav>
   );
@@ -95,7 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <span className="font-bold">CampusConnect</span>
             </Link>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 overflow-y-auto">
            <NavLinks />
           </div>
         </div>
@@ -109,13 +98,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col">
-              <SheetTitle className="sr-only">Navigation</SheetTitle>
-              <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold mb-4">
-                 <Icons.logo width={32} height={32} />
-                <span className="font-bold">CampusConnect</span>
-              </Link>
-              <NavLinks isMobile />
+            <SheetContent side="left" className="flex flex-col p-0">
+               <div className="flex h-14 items-center border-b px-4">
+                <Link href="/dashboard" className="flex items-center gap-2 font-semibold" onClick={() => setMobileNavOpen(false)}>
+                    <Icons.logo width={28} height={28} />
+                    <span className="font-bold">CampusConnect</span>
+                </Link>
+               </div>
+              <div className="flex-1 overflow-y-auto py-2">
+                <NavLinks/>
+              </div>
             </SheetContent>
           </Sheet>
           <div className="w-full flex-1" />

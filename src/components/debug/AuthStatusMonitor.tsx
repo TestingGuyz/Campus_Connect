@@ -1,8 +1,8 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
-import { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronUp, TerminalSquare, Shield, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { ChevronDown, ChevronUp, TerminalSquare, Shield, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
@@ -18,6 +18,14 @@ export function AuthStatusMonitor() {
   const [logs, setLogs] = useState<Log[]>([]);
   const [isAuthVisible, setIsAuthVisible] = useState(true);
   const [isConsoleVisible, setIsConsoleVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(true);
+
+  // Use refs to hold the original console methods
+  const originalConsole = useRef({
+    log: console.log,
+    error: console.error,
+    warn: console.warn,
+  });
 
   const status = {
     isAuthLoading,
@@ -32,26 +40,26 @@ export function AuthStatusMonitor() {
     : user
     ? 'bg-green-600 border-green-700'
     : 'bg-red-600 border-red-700';
-
-  const captureConsole = useCallback((type: 'log' | 'error' | 'warn') => {
-    const original = console[type];
-    return (...args: any[]) => {
+  
+  useEffect(() => {
+    const capture = (type: 'log' | 'error' | 'warn') => (...args: any[]) => {
       const timestamp = new Date().toLocaleTimeString();
-      setLogs(prevLogs => [{ type, message: args, timestamp }, ...prevLogs]);
-      original.apply(console, args);
+      setLogs(prevLogs => [{ type, message: args, timestamp }, ...prevLogs.slice(0, 99)]); // Keep last 100 logs
+      originalConsole.current[type](...args);
+    };
+
+    console.log = capture('log');
+    console.error = capture('error');
+    console.warn = capture('warn');
+
+    // Cleanup function to restore original console methods
+    return () => {
+      console.log = originalConsole.current.log;
+      console.error = originalConsole.current.error;
+      console.warn = originalConsole.current.warn;
     };
   }, []);
 
-  useEffect(() => {
-    console.log = captureConsole('log');
-    console.error = captureConsole('error');
-    console.warn = captureConsole('warn');
-
-    return () => {
-      // If needed, restore original console methods on cleanup
-    };
-  }, [captureConsole]);
-  
   const getLogColor = (type: Log['type']) => {
       switch(type) {
           case 'error': return 'text-red-400';
@@ -60,10 +68,19 @@ export function AuthStatusMonitor() {
       }
   }
 
+  if (!isVisible) {
+      return null;
+  }
+
   return (
     <div
       className="fixed bottom-4 left-4 z-[9999] w-[calc(100vw-32px)] max-w-lg rounded-lg border bg-neutral-900/90 text-white shadow-2xl backdrop-blur-sm"
     >
+      <button onClick={() => setIsVisible(false)} className="absolute -top-2 -right-2 z-10 rounded-full bg-neutral-800 p-1 text-white shadow-lg hover:bg-red-600">
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close Debug Panel</span>
+      </button>
+
       {/* Auth Status Section */}
       <div className={cn("p-3 rounded-t-lg transition-colors", statusColor)}>
         <button 
@@ -93,8 +110,8 @@ export function AuthStatusMonitor() {
           <span className="font-bold">Live Console</span>
         </button>
         <div className="flex items-center gap-2">
-          <Button size="icon" variant="ghost" className="h-6 w-6 text-white" onClick={(e) => {e.stopPropagation(); setLogs([])}}>
-              <X className="h-4 w-4" />
+          <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:text-white hover:bg-neutral-700" onClick={(e) => {e.stopPropagation(); setLogs([])}}>
+              <Trash2 className="h-4 w-4" />
           </Button>
           <button onClick={() => setIsConsoleVisible(!isConsoleVisible)}>
             {isConsoleVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

@@ -4,8 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, getDoc, setDoc } from 'firebase/firestore';
-import { useEffect, useState, useMemo } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -89,34 +89,36 @@ function StudentTimetableView() {
     }
 
     return (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead className="w-[120px]">Time</TableHead>
-                    {days.map(day => <TableHead key={day}>{day}</TableHead>)}
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {periods.map((period, index) => (
-                    <TableRow key={period}>
-                        <TableCell className="font-medium">
-                            {periodTimes[index]}
-                            {index === 3 && <div className='text-xs text-center text-muted-foreground pt-2'>(Tiffin</div>}
-                            {index === 4 && <div className='text-xs text-center text-muted-foreground pb-2'>Break)</div>}
-                        </TableCell>
-                        {days.map(day => (
-                            <TableCell key={day}>
-                                {timetable[day as keyof TimetableData]?.[period] && (
-                                    <Badge variant="outline" className={`font-semibold ${getSubjectBadgeColor(timetable[day as keyof TimetableData][period])}`}>
-                                        {timetable[day as keyof TimetableData][period]}
-                                    </Badge>
-                                )}
-                            </TableCell>
-                        ))}
+        <div className="w-full overflow-x-auto">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[120px]">Time</TableHead>
+                        {days.map(day => <TableHead key={day}>{day}</TableHead>)}
                     </TableRow>
-                ))}
-            </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                    {periods.map((period, index) => (
+                        <TableRow key={period}>
+                            <TableCell className="font-medium">
+                                {periodTimes[index]}
+                                {index === 3 && <div className='text-xs text-center text-muted-foreground pt-2'>(Tiffin</div>}
+                                {index === 4 && <div className='text-xs text-center text-muted-foreground pb-2'>Break)</div>}
+                            </TableCell>
+                            {days.map(day => (
+                                <TableCell key={day}>
+                                    {timetable[day as keyof TimetableData]?.[period] && (
+                                        <Badge variant="outline" className={`font-semibold ${getSubjectBadgeColor(timetable[day as keyof TimetableData][period])}`}>
+                                            {timetable[day as keyof TimetableData][period]}
+                                        </Badge>
+                                    )}
+                                </TableCell>
+                            ))}
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
     );
 }
 
@@ -183,7 +185,7 @@ function TeacherAdminTimetableView() {
                     <CardTitle>Select Class and Section</CardTitle>
                     <CardDescription>Choose the class and section to manage the timetable for.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex gap-4">
+                <CardContent className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 space-y-2">
                         <label htmlFor="class-id">Class</label>
                         <Input id="class-id" value={classId} onChange={(e) => setClassId(e.target.value)} placeholder="e.g., 10" />
@@ -196,8 +198,8 @@ function TeacherAdminTimetableView() {
             </Card>
 
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div className="mb-4 sm:mb-0">
                         <CardTitle>Edit Timetable</CardTitle>
                         <CardDescription>Fill in the subjects for each period.</CardDescription>
                     </div>
@@ -208,39 +210,41 @@ function TeacherAdminTimetableView() {
                 </CardHeader>
                 <CardContent>
                     {isLoading ? <Skeleton className="h-[400px] w-full" /> : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[120px]">Time</TableHead>
-                                    {days.map(day => <TableHead key={day}>{day}</TableHead>)}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {periods.map((period, index) => (
-                                    <TableRow key={period}>
-                                        <TableCell className="font-medium">
-                                            {periodTimes[index]}
-                                            {index === 3 && <div className='text-xs text-center text-muted-foreground pt-2'>(Tiffin Break)</div>}
-                                        </TableCell>
-                                        {days.map(day => (
-                                            <TableCell key={day}>
-                                                {index === 3 || index === 4 ? (
-                                                    <Badge variant="outline" className="font-semibold bg-gray-200 text-gray-800 border-gray-300">
-                                                        {index === 3 ? 'Tiffin' : 'Break'}
-                                                    </Badge>
-                                                ) : (
-                                                    <Input
-                                                        value={timetable[day as keyof TimetableData]?.[period] || ''}
-                                                        onChange={(e) => handleInputChange(day as keyof TimetableData, period, e.target.value)}
-                                                        className="h-8"
-                                                    />
-                                                )}
-                                            </TableCell>
-                                        ))}
+                        <div className="w-full overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[120px] min-w-[120px]">Time</TableHead>
+                                        {days.map(day => <TableHead key={day} className="min-w-[150px]">{day}</TableHead>)}
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {periods.map((period, index) => (
+                                        <TableRow key={period}>
+                                            <TableCell className="font-medium">
+                                                {periodTimes[index]}
+                                                {index === 3 && <div className='text-xs text-center text-muted-foreground pt-2'>(Tiffin Break)</div>}
+                                            </TableCell>
+                                            {days.map(day => (
+                                                <TableCell key={day}>
+                                                    {index === 3 || index === 4 ? (
+                                                        <Badge variant="outline" className="font-semibold bg-gray-200 text-gray-800 border-gray-300">
+                                                            {index === 3 ? 'Tiffin' : 'Break'}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Input
+                                                            value={timetable[day as keyof TimetableData]?.[period] || ''}
+                                                            onChange={(e) => handleInputChange(day as keyof TimetableData, period, e.target.value)}
+                                                            className="h-8"
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>

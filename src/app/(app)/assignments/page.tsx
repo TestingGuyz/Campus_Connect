@@ -166,7 +166,7 @@ function TeacherView() {
         <CardContent>
           <ul className="space-y-3">
             {assignments?.map(a => (
-                <li key={a.id} className="flex items-center justify-between rounded-lg border p-4">
+                <li key={a.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border p-4 gap-4">
                     <div className="flex items-center gap-4">
                         <FileText className="h-6 w-6 text-primary" />
                         <div>
@@ -174,7 +174,7 @@ function TeacherView() {
                             <p className="text-sm text-muted-foreground">{a.subject} | Class {a.classId}{a.sectionId} - Due: {a.dueDate}</p>
                         </div>
                     </div>
-                    <div className='flex items-center gap-2'>
+                    <div className='flex items-center gap-2 shrink-0'>
                       <Button variant="ghost" size="icon" disabled={!a.fileUrl} onClick={() => a.fileUrl && window.open(a.fileUrl, '_blank')}>
                           <Download className="h-4 w-4" />
                       </Button>
@@ -291,61 +291,63 @@ function StudentView() {
         <CardDescription>Here is a list of your current and past assignments.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]"></TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead className="hidden sm:table-cell">Subject</TableHead>
-              <TableHead className="hidden md:table-cell">Due Date</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {combinedAssignments.length > 0 ? (
-                combinedAssignments.map(assignment => (
-                <TableRow key={assignment.id} className={assignment.status === 'Completed' ? 'bg-muted/50' : ''}>
-                    <TableCell>
-                    <Checkbox 
-                        checked={assignment.status === 'Completed'} 
-                        onCheckedChange={(checked) => handleStudentAssignmentChange(assignment.id, (assignment as any).studentAssignmentId, 'status', checked ? 'Completed' : 'In Progress')}
-                    />
-                    </TableCell>
-                    <TableCell className={`font-medium ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.title}</TableCell>
-                    <TableCell className={`hidden sm:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.subject}</TableCell>
-                    <TableCell className={`hidden md:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.dueDate}</TableCell>
-                    <TableCell>
-                    <Select 
-                        defaultValue={assignment.priority}
-                        onValueChange={(value) => handleStudentAssignmentChange(assignment.id, (assignment as any).studentAssignmentId, 'priority', value)}
-                    >
-                        <SelectTrigger className="w-[120px] h-8 text-xs focus:ring-0 border-0 bg-transparent">
-                            <SelectValue placeholder="Priority" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="High"><Badge variant={getPriorityBadgeVariant("High")}>High Priority</Badge></SelectItem>
-                        <SelectItem value="Medium"><Badge variant={getPriorityBadgeVariant("Medium")}>Medium Priority</Badge></SelectItem>
-                        <SelectItem value="Low"><Badge variant={getPriorityBadgeVariant("Low")}>Low Priority</Badge></SelectItem>
-                        </SelectContent>
-                    </Select>
-                    </TableCell>
-                    <TableCell className="text-right">
-                    <Button variant="outline" size="sm" disabled={!assignment.fileUrl} onClick={() => assignment.fileUrl && window.open(assignment.fileUrl, '_blank')}>
-                        <Download className="h-4 w-4" />
-                    </Button>
-                    </TableCell>
-                </TableRow>
-                ))
-            ) : (
+        <div className="w-full overflow-x-auto">
+            <Table>
+            <TableHeader>
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                        No assignments found for your class. Great job staying on top of your work!
-                    </TableCell>
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead className="hidden sm:table-cell">Subject</TableHead>
+                <TableHead className="hidden md:table-cell">Due Date</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+                {combinedAssignments.length > 0 ? (
+                    combinedAssignments.map(assignment => (
+                    <TableRow key={assignment.id} className={assignment.status === 'Completed' ? 'bg-muted/50' : ''}>
+                        <TableCell>
+                        <Checkbox 
+                            checked={assignment.status === 'Completed'} 
+                            onCheckedChange={(checked) => handleStudentAssignmentChange(assignment.id, (assignment as any).studentAssignmentId, 'status', checked ? 'Completed' : 'In Progress')}
+                        />
+                        </TableCell>
+                        <TableCell className={`font-medium ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.title}</TableCell>
+                        <TableCell className={`hidden sm:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.subject}</TableCell>
+                        <TableCell className={`hidden md:table-cell ${assignment.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>{assignment.dueDate}</TableCell>
+                        <TableCell>
+                        <Select 
+                            defaultValue={assignment.priority}
+                            onValueChange={(value) => handleStudentAssignmentChange(assignment.id, (assignment as any).studentAssignmentId, 'priority', value)}
+                        >
+                            <SelectTrigger className="w-[120px] h-8 text-xs focus:ring-0 border-0 bg-transparent">
+                                <SelectValue placeholder="Priority" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="High"><Badge variant={getPriorityBadgeVariant("High")}>High Priority</Badge></SelectItem>
+                            <SelectItem value="Medium"><Badge variant={getPriorityBadgeVariant("Medium")}>Medium Priority</Badge></SelectItem>
+                            <SelectItem value="Low"><Badge variant={getPriorityBadgeVariant("Low")}>Low Priority</Badge></SelectItem>
+                            </SelectContent>
+                        </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                        <Button variant="outline" size="sm" disabled={!assignment.fileUrl} onClick={() => assignment.fileUrl && window.open(assignment.fileUrl, '_blank')}>
+                            <Download className="h-4 w-4" />
+                        </Button>
+                        </TableCell>
+                    </TableRow>
+                    ))
+                ) : (
+                    <TableRow>
+                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                            No assignments found for your class. Great job staying on top of your work!
+                        </TableCell>
+                    </TableRow>
+                )}
+            </TableBody>
+            </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -374,7 +376,7 @@ export default function AssignmentsPage() {
 
   return (
     <div className="space-y-6">
-       <div className="flex items-center justify-between">
+       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">
             {canManageAssignments ? 'Assignments Management' : 'Assignments To-Do'}
@@ -389,5 +391,3 @@ export default function AssignmentsPage() {
     </div>
   );
 }
-
-    
