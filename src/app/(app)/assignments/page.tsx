@@ -80,25 +80,24 @@ function TeacherView() {
             return;
         }
 
-        // Mock file upload by creating a placeholder URL
-        let fileUrl, fileName;
-        if (file) {
-            fileName = file.name;
-            // In a real app, you would upload to a service like Firebase Storage and get a URL.
-            // Here, we'll use a placeholder URL for demonstration.
-            fileUrl = 'https://picsum.photos/seed/document/600/400';
-            toast({title: "File Attached", description: `${fileName} is ready for upload.`});
-        }
-
-        const assignmentData = {
+        const assignmentData: Omit<Assignment, 'id'> = {
             title,
             subject,
             dueDate,
             classId,
             sectionId,
             createdAt: serverTimestamp(),
-            ...(fileUrl && { fileUrl, fileName }),
         };
+
+        // Mock file upload by creating a placeholder URL
+        if (file) {
+            assignmentData.fileName = file.name;
+            // In a real app, you would upload to a service like Firebase Storage and get a URL.
+            // Here, we'll use a placeholder URL for demonstration.
+            assignmentData.fileUrl = 'https://picsum.photos/seed/document/600/400';
+            toast({title: "File Attached", description: `${file.name} is ready for upload.`});
+        }
+
 
         addDoc(collection(firestore, 'assignments'), assignmentData).then(() => {
             toast({ title: 'Success', description: 'Assignment created successfully.' });
