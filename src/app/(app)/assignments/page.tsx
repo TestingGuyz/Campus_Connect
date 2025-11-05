@@ -256,12 +256,12 @@ function StudentView() {
     const [combinedAssignments, setCombinedAssignments] = useState<(Assignment & Partial<StudentAssignment>)[]>([]);
 
     useEffect(() => {
-        if (!classAssignments) {
-            setCombinedAssignments([]);
+        if (!classAssignments || !studentAssignmentsData) {
+            setCombinedAssignments(classAssignments || []);
             return;
         }
 
-        const studentDataMap = new Map(studentAssignmentsData?.map(sa => [sa.assignmentId, sa]) || []);
+        const studentDataMap = new Map(studentAssignmentsData.map(sa => [sa.assignmentId, sa]));
 
         const combined = classAssignments.map(assignment => {
             const studentData = studentDataMap.get(assignment.id);
