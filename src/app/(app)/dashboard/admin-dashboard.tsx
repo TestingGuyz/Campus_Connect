@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, BookOpen, Check, Users, CalendarCheck, BarChart2 } from 'lucide-react';
+import { Activity, BookOpen, Users, CalendarCheck, BarChart2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,

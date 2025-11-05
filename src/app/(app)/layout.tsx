@@ -92,8 +92,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-               <SheetTitle className="hidden">Main Menu</SheetTitle>
-               <SheetDescription className="hidden">
+               <SheetTitle className="sr-only">Main Menu</SheetTitle>
+               <SheetDescription className="sr-only">
                 A list of navigation links for the application.
                </SheetDescription>
                <div className="flex h-14 items-center border-b px-4">
