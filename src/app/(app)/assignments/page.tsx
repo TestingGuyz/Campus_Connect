@@ -241,25 +241,24 @@ function StudentView() {
     const [combinedAssignments, setCombinedAssignments] = useState<(Assignment & Partial<StudentAssignment>)[]>([]);
 
     useEffect(() => {
-        if (classAssignments && studentAssignmentsData) {
-            const combined = classAssignments.map(assignment => {
-                const studentData = studentAssignmentsData.find(sa => sa.assignmentId === assignment.id);
-                return {
-                    ...assignment,
-                    status: studentData?.status || 'Not Started',
-                    priority: studentData?.priority || 'Medium',
-                    studentAssignmentId: studentData?.id,
-                };
-            });
-            setCombinedAssignments(combined);
-        } else if (classAssignments) {
-            const combined = classAssignments.map(assignment => ({
-                 ...assignment,
-                 status: 'Not Started' as const,
-                 priority: 'Medium' as const,
-            }));
-            setCombinedAssignments(combined);
+        if (!classAssignments) {
+            setCombinedAssignments([]);
+            return;
         }
+
+        const studentDataMap = new Map(studentAssignmentsData?.map(sa => [sa.assignmentId, sa]));
+
+        const combined = classAssignments.map(assignment => {
+            const studentData = studentDataMap.get(assignment.id);
+            return {
+                ...assignment,
+                status: studentData?.status || 'Not Started',
+                priority: studentData?.priority || 'Medium',
+                studentAssignmentId: studentData?.id,
+            };
+        });
+        setCombinedAssignments(combined);
+
     }, [classAssignments, studentAssignmentsData]);
 
 
