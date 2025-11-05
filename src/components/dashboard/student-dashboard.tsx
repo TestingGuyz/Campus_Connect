@@ -195,18 +195,20 @@ export default function StudentDashboard() {
                 <CardDescription>Don't miss these school-wide events.</CardDescription>
             </CardHeader>
             <CardContent>
-                <ul className="space-y-3">
-                    {highPriorityEvents.map(event => (
-                        <li key={event.id} className="flex items-center justify-between text-sm p-3 rounded-lg bg-muted">
-                            <div>
-                                <p className="font-medium">{event.title}</p>
-                                <p className="text-xs text-muted-foreground">{new Date(event.date + 'T00:00:00').toLocaleDateString()}</p>
-                            </div>
-                            <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
-                        </li>
-                    ))}
-                        {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events scheduled.</p>}
-                </ul>
+                 <div className="overflow-x-auto">
+                    <ul className="space-y-3">
+                        {highPriorityEvents.map(event => (
+                            <li key={event.id} className="flex items-center justify-between text-sm p-3 rounded-lg bg-muted">
+                                <div>
+                                    <p className="font-medium">{event.title}</p>
+                                    <p className="text-xs text-muted-foreground">{new Date(event.date + 'T00:00:00').toLocaleDateString()}</p>
+                                </div>
+                                <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
+                            </li>
+                        ))}
+                            {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events scheduled.</p>}
+                    </ul>
+                </div>
                  <Button variant="outline" className="mt-6 w-full" asChild>
                     <Link href="/calendar">View Full Calendar <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>

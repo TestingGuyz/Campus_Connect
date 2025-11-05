@@ -183,20 +183,24 @@ export default function AdminDashboard() {
                 <CardDescription>Urgent upcoming events and deadlines.</CardDescription>
             </CardHeader>
             <CardContent>
-                {isLoading ? <p>Loading events...</p> : (
+                 <div className="overflow-x-auto">
                     <ul className="space-y-3">
-                        {highPriorityEvents.map(event => (
-                            <li key={event.id} className="flex items-center justify-between text-sm">
-                                <div>
-                                    <p className="font-medium">{event.title}</p>
-                                    <p className="text-xs text-muted-foreground">{new Date(event.date + 'T00:00:00').toLocaleDateString()}</p>
-                                </div>
-                                <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
-                            </li>
-                        ))}
-                         {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events found.</p>}
+                        {isLoading ? <p>Loading events...</p> : (
+                           <>
+                            {highPriorityEvents.map(event => (
+                                <li key={event.id} className="flex items-center justify-between text-sm">
+                                    <div>
+                                        <p className="font-medium">{event.title}</p>
+                                        <p className="text-xs text-muted-foreground">{new Date(event.date + 'T00:00:00').toLocaleDateString()}</p>
+                                    </div>
+                                    <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
+                                </li>
+                            ))}
+                            {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events found.</p>}
+                           </>
+                        )}
                     </ul>
-                )}
+                </div>
             </CardContent>
             </Card>
             <Card>
@@ -205,21 +209,23 @@ export default function AdminDashboard() {
                 <CardDescription>A log of recent student and staff actions.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableBody>
-                        {recentActivities.map((activity, index) => (
-                            <TableRow key={index}>
-                                <TableCell className='p-2'>
-                                    <div className="font-medium">{activity.student}</div>
-                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                        {activity.activity}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-right p-2">{activity.time}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                 <div className="overflow-x-auto">
+                    <Table>
+                        <TableBody>
+                            {recentActivities.map((activity, index) => (
+                                <TableRow key={index}>
+                                    <TableCell className='p-2'>
+                                        <div className="font-medium">{activity.student}</div>
+                                        <div className="hidden text-sm text-muted-foreground sm:inline">
+                                            {activity.activity}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right p-2">{activity.time}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
             </Card>
         </div>

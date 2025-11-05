@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, BookOpen, Check, Users, CalendarCheck } from 'lucide-react';
+import { Activity, BookOpen, Check, Users, CalendarCheck, BarChart2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -40,7 +40,7 @@ const chartConfig = {
   },
   assignments: {
     label: "Assignments",
-    color: "hsl(var(--secondary))",
+    color: "hsl(var(--primary) / 0.3)",
   },
 } satisfies ChartConfig;
 
@@ -71,7 +71,7 @@ const getPriorityBadge = (priority: string) => {
 
 export default function AdminDashboard() {
   const firestore = useFirestore();
-  const { isAuthLoading, user } = useAuth();
+  const { user, isAuthLoading } = useAuth();
 
   const eventsQuery = useMemoFirebase(() => {
     if (isAuthLoading || !user || !firestore) return null;
@@ -88,8 +88,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-headline font-bold">Admin Dashboard</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -100,21 +99,21 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">1,234</div>
             <p className="text-xs text-muted-foreground">
-              +20.1% from last month
+              +2.1% from last month
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Assignments Graded
+              Active Staff
             </CardTitle>
-            <Check className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+573</div>
+            <div className="text-2xl font-bold">52</div>
             <p className="text-xs text-muted-foreground">
-              +201 since last hour
+              +5 since last hour
             </p>
           </CardContent>
         </Card>
@@ -135,23 +134,24 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-                Active Staff
+                Attendance Rate
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <BarChart2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">52</div>
+            <div className="text-2xl font-bold">94.5%</div>
             <p className="text-xs text-muted-foreground">
-              Online now
+              +0.5% from yesterday
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>Overview</CardTitle>
+            <CardTitle>School Activity Overview</CardTitle>
+            <CardDescription>A summary of attendance and assignments over the past 6 months.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
@@ -170,13 +170,13 @@ export default function AdminDashboard() {
                   content={<ChartTooltipContent indicator="dot" />}
                 />
                  <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="attendance" fill="var(--color-attendance)" radius={4} />
-                <Bar dataKey="assignments" fill="var(--color-assignments)" radius={4} />
+                <Bar dataKey="attendance" fill="var(--color-attendance)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="assignments" fill="var(--color-assignments)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
-        <div className="lg:col-span-3 grid gap-6">
+        <div className="lg:col-span-3 grid grid-cols-1 gap-6 auto-rows-max">
             <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><CalendarCheck className="text-destructive"/> High-Priority Events</CardTitle>
@@ -184,41 +184,46 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
                 {isLoading ? <p>Loading events...</p> : (
-                    <ul className="space-y-3">
-                        {highPriorityEvents.map(event => (
-                            <li key={event.id} className="flex items-center justify-between text-sm">
-                                <div>
-                                    <p className="font-medium">{event.title}</p>
-                                    <p className="text-xs text-muted-foreground">{new Date(event.date + 'T00:00:00').toLocaleDateString()}</p>
-                                </div>
-                                <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
-                            </li>
-                        ))}
-                         {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events found.</p>}
-                    </ul>
+                    <div className="overflow-x-auto">
+                        <ul className="space-y-3">
+                            {highPriorityEvents.map(event => (
+                                <li key={event.id} className="flex items-center justify-between text-sm">
+                                    <div>
+                                        <p className="font-medium">{event.title}</p>
+                                        <p className="text-xs text-muted-foreground">{new Date(event.date + 'T00:00:00').toLocaleDateString()}</p>
+                                    </div>
+                                    <Badge variant={getPriorityBadge(event.priority)}>{event.priority}</Badge>
+                                </li>
+                            ))}
+                            {highPriorityEvents.length === 0 && <p className="text-sm text-muted-foreground">No high-priority events found.</p>}
+                        </ul>
+                    </div>
                 )}
             </CardContent>
             </Card>
             <Card>
             <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>A log of recent student and staff actions.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableBody>
-                        {recentActivities.map((activity, index) => (
-                            <TableRow key={index}>
-                                <TableCell>
-                                    <div className="font-medium">{activity.student}</div>
-                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                        {activity.activity}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-right">{activity.time}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableBody>
+                            {recentActivities.map((activity, index) => (
+                                <TableRow key={index}>
+                                    <TableCell className='p-2'>
+                                        <div className="font-medium">{activity.student}</div>
+                                        <div className="hidden text-sm text-muted-foreground md:inline">
+                                            {activity.activity}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right p-2">{activity.time}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
             </Card>
         </div>

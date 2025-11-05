@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Book,
   Calendar,
@@ -21,7 +21,6 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
-import { AuthStatusMonitor } from '@/components/debug/AuthStatusMonitor';
 
 interface NavItem {
   href: string;
@@ -46,7 +45,6 @@ const navItems: NavItem[] = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
   const filteredNavItems = user ? navItems.filter(item => item.roles.includes(user.role)) : [];
@@ -94,8 +92,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-               <SheetTitle className="sr-only">Main Menu</SheetTitle>
-               <SheetDescription className="sr-only">
+               <SheetTitle className="hidden">Main Menu</SheetTitle>
+               <SheetDescription className="hidden">
                 A list of navigation links for the application.
                </SheetDescription>
                <div className="flex h-14 items-center border-b px-4">
@@ -116,7 +114,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-      <AuthStatusMonitor />
     </div>
   );
 }
