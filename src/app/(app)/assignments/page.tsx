@@ -87,6 +87,9 @@ function TeacherView() {
             classId,
             sectionId,
             createdAt: serverTimestamp(),
+            // Ensure these are undefined if no file is attached
+            fileName: undefined,
+            fileUrl: undefined,
         };
 
         // Mock file upload by creating a placeholder URL
@@ -240,20 +243,30 @@ function StudentView() {
     const [combinedAssignments, setCombinedAssignments] = useState<(Assignment & Partial<StudentAssignment>)[]>([]);
 
     useEffect(() => {
-        if (!classAssignments) {
-            setCombinedAssignments([]);
+        if (!classAssignments || !studentAssignmentsData) {
+             if (classAssignments) {
+                setCombinedAssignments(classAssignments.map(assignment => ({
+                    ...assignment,
+                    status: 'Not Started',
+                    priority: 'Medium',
+                })));
+            } else {
+                setCombinedAssignments([]);
+            }
             return;
         }
 
-        const studentDataMap = new Map(studentAssignmentsData?.map(sa => [sa.assignmentId, sa]));
+        const studentDataMap = new Map(studentAssignmentsData.map(sa => [sa.assignmentId, sa]));
 
         const combined = classAssignments.map(assignment => {
             const studentData = studentDataMap.get(assignment.id);
             return {
-                ...assignment,
+                ...assignment, // This contains the fileUrl and fileName
+                // The studentData may or may not exist, so we use optional chaining and provide defaults
                 status: studentData?.status || 'Not Started',
                 priority: studentData?.priority || 'Medium',
-                studentAssignmentId: studentData?.id,
+                id: assignment.id, // Ensure original assignment ID is kept
+                studentAssignmentId: studentData?.id, // This can be undefined
             };
         });
         setCombinedAssignments(combined);
