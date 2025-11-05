@@ -25,7 +25,7 @@ type Assignment = {
     title: string;
     subject: string;
     dueDate: string;
-    fileUrl?: string;
+    fileUrl?: string; // This will now be a Base64 Data URL
     fileName?: string;
     classId: string;
     sectionId: string;
@@ -47,6 +47,15 @@ const getPriorityBadgeVariant = (priority: string) => {
     case 'Low': return 'outline';
     default: return 'outline';
   }
+};
+
+const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
 };
 
 function TeacherView() {
@@ -74,7 +83,7 @@ function TeacherView() {
         }
     };
 
-    const handleCreateAssignment = () => {
+    const handleCreateAssignment = async () => {
         if (!firestore || !title || !subject || !dueDate || !classId || !sectionId) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields.' });
             return;
@@ -87,20 +96,22 @@ function TeacherView() {
             classId,
             sectionId,
             createdAt: serverTimestamp(),
-            // Ensure these are undefined if no file is attached
             fileName: undefined,
             fileUrl: undefined,
         };
-
-        // Mock file upload by creating a placeholder URL
+        
         if (file) {
-            assignmentData.fileName = file.name;
-            // In a real app, you would upload to a service like Firebase Storage and get a URL.
-            // Here, we'll use a placeholder URL for demonstration.
-            assignmentData.fileUrl = 'https://picsum.photos/seed/document/600/400';
-            toast({title: "File Attached", description: `${file.name} is ready for upload.`});
+            try {
+                const dataUrl = await fileToDataUrl(file);
+                assignmentData.fileName = file.name;
+                assignmentData.fileUrl = dataUrl;
+                toast({title: "File Ready", description: `"${file.name}" has been processed and is ready for upload.`});
+            } catch (error) {
+                console.error("Error converting file to data URL:", error);
+                toast({variant: 'destructive', title: 'File Error', description: 'Could not process the selected file.'});
+                return; // Stop if file processing fails
+            }
         }
-
 
         addDoc(collection(firestore, 'assignments'), assignmentData).then(() => {
             toast({ title: 'Success', description: 'Assignment created successfully.' });
@@ -198,8 +209,10 @@ function TeacherView() {
                           </div>
                       </div>
                       <div className='flex items-center gap-2 shrink-0'>
-                        <Button variant="ghost" size="icon" disabled={!a.fileUrl} onClick={() => a.fileUrl && window.open(a.fileUrl, '_blank')}>
-                            <Download className="h-4 w-4" />
+                        <Button asChild variant="ghost" size="icon" disabled={!a.fileUrl}>
+                            <a href={a.fileUrl} download={a.fileName}>
+                                <Download className="h-4 w-4" />
+                            </a>
                         </Button>
                         <Button variant="ghost" size="icon">
                             <Edit className="h-4 w-4" />
@@ -243,30 +256,20 @@ function StudentView() {
     const [combinedAssignments, setCombinedAssignments] = useState<(Assignment & Partial<StudentAssignment>)[]>([]);
 
     useEffect(() => {
-        if (!classAssignments || !studentAssignmentsData) {
-             if (classAssignments) {
-                setCombinedAssignments(classAssignments.map(assignment => ({
-                    ...assignment,
-                    status: 'Not Started',
-                    priority: 'Medium',
-                })));
-            } else {
-                setCombinedAssignments([]);
-            }
+        if (!classAssignments) {
+            setCombinedAssignments([]);
             return;
         }
 
-        const studentDataMap = new Map(studentAssignmentsData.map(sa => [sa.assignmentId, sa]));
+        const studentDataMap = new Map(studentAssignmentsData?.map(sa => [sa.assignmentId, sa]) || []);
 
         const combined = classAssignments.map(assignment => {
             const studentData = studentDataMap.get(assignment.id);
             return {
-                ...assignment, // This contains the fileUrl and fileName
-                // The studentData may or may not exist, so we use optional chaining and provide defaults
+                ...assignment, // This contains the fileUrl and fileName from the original assignment
                 status: studentData?.status || 'Not Started',
                 priority: studentData?.priority || 'Medium',
-                id: assignment.id, // Ensure original assignment ID is kept
-                studentAssignmentId: studentData?.id, // This can be undefined
+                studentAssignmentId: studentData?.id,
             };
         });
         setCombinedAssignments(combined);
@@ -365,9 +368,11 @@ function StudentView() {
                         </Select>
                         </TableCell>
                         <TableCell className="text-right">
-                        <Button variant="outline" size="sm" disabled={!assignment.fileUrl} onClick={() => assignment.fileUrl && window.open(assignment.fileUrl, '_blank')}>
-                            <Download className="h-4 w-4" />
-                        </Button>
+                            <Button asChild variant="outline" size="sm" disabled={!assignment.fileUrl}>
+                                <a href={assignment.fileUrl} download={assignment.fileName}>
+                                    <Download className="h-4 w-4" />
+                                </a>
+                            </Button>
                         </TableCell>
                     </TableRow>
                     ))
