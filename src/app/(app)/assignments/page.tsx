@@ -59,6 +59,7 @@ function TeacherView() {
     const [dueDate, setDueDate] = useState('');
     const [classId, setClassId] = useState('');
     const [sectionId, setSectionId] = useState('');
+    const [file, setFile] = useState<File | null>(null);
     
     const assignmentsQuery = useMemoFirebase(() => {
         if (isAuthLoading || !user || !firestore) return null;
@@ -67,10 +68,26 @@ function TeacherView() {
 
     const { data: assignments, isLoading } = useCollection<Assignment>(assignmentsQuery);
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setFile(e.target.files[0]);
+        }
+    };
+
     const handleCreateAssignment = () => {
         if (!firestore || !title || !subject || !dueDate || !classId || !sectionId) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields.' });
             return;
+        }
+
+        // Mock file upload by creating a placeholder URL
+        let fileUrl, fileName;
+        if (file) {
+            fileName = file.name;
+            // In a real app, you would upload to a service like Firebase Storage and get a URL.
+            // Here, we'll use a placeholder URL for demonstration.
+            fileUrl = 'https://picsum.photos/seed/document/600/400';
+            toast({title: "File Attached", description: `${fileName} is ready for upload.`});
         }
 
         const assignmentData = {
@@ -80,12 +97,15 @@ function TeacherView() {
             classId,
             sectionId,
             createdAt: serverTimestamp(),
+            ...(fileUrl && { fileUrl, fileName }),
         };
 
         addDoc(collection(firestore, 'assignments'), assignmentData).then(() => {
             toast({ title: 'Success', description: 'Assignment created successfully.' });
             // Reset form
-            setTitle(''); setSubject(''); setDueDate(''); setClassId(''); setSectionId('');
+            setTitle(''); setSubject(''); setDueDate(''); setClassId(''); setSectionId(''); setFile(null);
+            const fileInput = document.getElementById('file') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
         }).catch(error => {
             const permissionError = new FirestorePermissionError({
                 path: 'assignments',
@@ -150,7 +170,7 @@ function TeacherView() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="file">Attach File (Optional)</Label>
-            <Input id="file" type="file" />
+            <Input id="file" type="file" onChange={handleFileChange} />
           </div>
           <Button className="w-full" onClick={handleCreateAssignment}>
             <Upload className="mr-2 h-4 w-4" />
