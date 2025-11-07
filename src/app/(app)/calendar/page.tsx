@@ -160,6 +160,7 @@ export default function CalendarPage() {
   
   const eventsForSelectedDay = events?.filter(event => {
     if (!date) return false;
+    // Add T00:00:00 to treat the date string as local time and avoid timezone issues
     const eventDate = new Date(event.date + 'T00:00:00');
     return eventDate.toDateString() === date.toDateString();
   }).sort((a, b) => a.priority.localeCompare(b.priority));
