@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Upload, FileText, Trash2, Edit } from 'lucide-react';
+import { Download, Upload, FileText, Trash2, Edit, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,7 +25,7 @@ type Assignment = {
     title: string;
     subject: string;
     dueDate: string;
-    fileUrl?: string; // This will now be a Base64 Data URL
+    fileUrl?: string;
     fileName?: string;
     classId: string;
     sectionId: string;
@@ -69,6 +69,7 @@ function TeacherView() {
     const [classId, setClassId] = useState('');
     const [sectionId, setSectionId] = useState('');
     const [file, setFile] = useState<File | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
     const assignmentsQuery = useMemoFirebase(() => {
         if (isAuthLoading || !user || !firestore) return null;
@@ -88,6 +89,7 @@ function TeacherView() {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields.' });
             return;
         }
+        setIsSubmitting(true);
 
         const assignmentData: Omit<Assignment, 'id'> = {
             title,
@@ -105,11 +107,11 @@ function TeacherView() {
                 const dataUrl = await fileToDataUrl(file);
                 assignmentData.fileName = file.name;
                 assignmentData.fileUrl = dataUrl;
-                toast({title: "File Ready", description: `"${file.name}" has been processed and is ready for upload.`});
             } catch (error) {
                 console.error("Error converting file to data URL:", error);
                 toast({variant: 'destructive', title: 'File Error', description: 'Could not process the selected file.'});
-                return; // Stop if file processing fails
+                setIsSubmitting(false);
+                return;
             }
         }
 
@@ -127,6 +129,8 @@ function TeacherView() {
             });
             errorEmitter.emit('permission-error', permissionError);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not create assignment.' });
+        }).finally(() => {
+            setIsSubmitting(false);
         });
     };
 
@@ -185,8 +189,8 @@ function TeacherView() {
             <Label htmlFor="file">Attach File (Optional)</Label>
             <Input id="file" type="file" onChange={handleFileChange} />
           </div>
-          <Button className="w-full" onClick={handleCreateAssignment}>
-            <Upload className="mr-2 h-4 w-4" />
+          <Button className="w-full" onClick={handleCreateAssignment} disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Upload className="mr-2 h-4 w-4" />}
             Create Assignment
           </Button>
         </CardContent>
@@ -265,7 +269,7 @@ function StudentView() {
             const combined: CombinedAssignment[] = classAssignments.map(assignment => {
                 const studentData = studentDataMap.get(assignment.id);
                 return {
-                    ...assignment, // This is the base assignment with title, fileUrl, etc.
+                    ...assignment,
                     status: studentData?.status ?? 'Not Started',
                     priority: studentData?.priority ?? 'Medium',
                     studentAssignmentId: studentData?.id,
