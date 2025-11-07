@@ -256,12 +256,12 @@ function StudentView() {
     const [combinedAssignments, setCombinedAssignments] = useState<(Assignment & Partial<StudentAssignment>)[]>([]);
 
     useEffect(() => {
-        if (!classAssignments || !studentAssignmentsData) {
-            setCombinedAssignments(classAssignments || []);
+        if (!classAssignments) {
+            setCombinedAssignments([]);
             return;
         }
 
-        const studentDataMap = new Map(studentAssignmentsData.map(sa => [sa.assignmentId, sa]));
+        const studentDataMap = new Map(studentAssignmentsData?.map(sa => [sa.assignmentId, sa]) || []);
 
         const combined = classAssignments.map(assignment => {
             const studentData = studentDataMap.get(assignment.id);
@@ -269,6 +269,7 @@ function StudentView() {
                 ...assignment, // This contains the fileUrl and fileName from the original assignment
                 status: studentData?.status || 'Not Started',
                 priority: studentData?.priority || 'Medium',
+                id: assignment.id, // Ensure original assignment ID is not lost
                 studentAssignmentId: studentData?.id,
             };
         });

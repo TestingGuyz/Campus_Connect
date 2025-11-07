@@ -177,7 +177,10 @@
         "authorId": { "type": "string" },
         "authorAvatarId": { "type": "string" },
         "message": { "type": "string" },
-        "timestamp": { "type": "object" }
+        "timestamp": { "type": "object" },
+        "fileUrl": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileType": { "type": "string" }
       },
       "required": ["authorName", "authorId", "message", "timestamp"]
     },
@@ -207,6 +210,22 @@
             "createdAt": { "type": "object"}
         },
         "required": ["title", "date", "type", "priority", "createdAt"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Represents the daily attendance records. The document ID is the date (YYYY-MM-DD).",
+      "type": "object",
+      "properties": {
+        "[classId]-[sectionId]": {
+          "type": "object",
+          "description": "A dynamic key combining class and section (e.g., '10-A').",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["present", "absent", "late"],
+            "description": "The student's attendance status. The key is the student ID."
+          }
+        }
+      }
     }
   },
   "auth": {
@@ -289,6 +308,12 @@
             "$ref": "#/entities/Event"
         },
         "description": "All calendar events for the school."
+      },
+      "attendance": {
+        "schema": {
+          "$ref": "#/entities/Attendance"
+        },
+        "description": "Daily attendance records for all classes. The document ID is the date (YYYY-MM-DD)."
       }
     },
     "initialData": [

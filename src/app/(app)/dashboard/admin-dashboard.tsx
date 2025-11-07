@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, BookOpen, Users, CalendarCheck, BarChart2 } from 'lucide-react';
+import { Activity, BookOpen, Users, CalendarCheck, BarChart2, UserCheck, UserX, UserClock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -20,27 +20,23 @@ import {
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import type { ChartConfig } from '@/components/ui/chart';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, collectionGroup, getDocs } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
-
-const chartData = [
-  { month: "January", attendance: 186, assignments: 80 },
-  { month: "February", attendance: 305, assignments: 200 },
-  { month: "March", attendance: 237, assignments: 120 },
-  { month: "April", attendance: 73, assignments: 190 },
-  { month: "May", attendance: 209, assignments: 130 },
-  { month: "June", attendance: 214, assignments: 140 },
-];
+import { useState, useEffect } from 'react';
 
 const chartConfig = {
-  attendance: {
-    label: "Attendance",
-    color: "hsl(var(--primary))",
+  present: {
+    label: "Present",
+    color: "hsl(var(--chart-2))",
   },
-  assignments: {
-    label: "Assignments",
-    color: "hsl(var(--primary) / 0.3)",
+  absent: {
+    label: "Absent",
+    color: "hsl(var(--chart-1))",
+  },
+  late: {
+    label: "Late",
+    color: "hsl(var(--chart-4))",
   },
 } satisfies ChartConfig;
 
@@ -60,6 +56,12 @@ type SchoolEvent = {
   priority: 'High' | 'Medium' | 'Low';
 };
 
+type AttendanceRecord = {
+  id: string;
+  date: string;
+  records: Record<string, 'present' | 'absent' | 'late'>;
+}
+
 const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'High': return 'destructive';
@@ -72,16 +74,61 @@ const getPriorityBadge = (priority: string) => {
 export default function AdminDashboard() {
   const firestore = useFirestore();
   const { user, isAuthLoading } = useAuth();
+  const [studentCount, setStudentCount] = useState(0);
+  const [teacherCount, setTeacherCount] = useState(0);
+  const [attendanceChartData, setAttendanceChartData] = useState<any[]>([]);
 
   const eventsQuery = useMemoFirebase(() => {
     if (isAuthLoading || !user || !firestore) return null;
     return collection(firestore, 'events');
   }, [firestore, user, isAuthLoading]);
 
+  const attendanceQuery = useMemoFirebase(() => {
+    if (isAuthLoading || !user || !firestore) return null;
+    return collection(firestore, 'attendance');
+  }, [firestore, user, isAuthLoading]);
+
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
+  const { data: attendanceData, isLoading: isLoadingAttendance } = useCollection<AttendanceRecord>(attendanceQuery);
+  
+  useEffect(() => {
+    const fetchCounts = async () => {
+        if (!firestore) return;
 
-  const isLoading = isAuthLoading || isLoadingEvents;
+        const teachersSnapshot = await getDocs(collection(firestore, 'teachers'));
+        setTeacherCount(teachersSnapshot.size);
 
+        const studentsSnapshot = await getDocs(collectionGroup(firestore, 'students'));
+        setStudentCount(studentsSnapshot.size);
+    };
+    fetchCounts();
+  }, [firestore]);
+
+  useEffect(() => {
+    if (attendanceData) {
+      const today = new Date();
+      const last5Days = Array.from({ length: 5 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        return d.toISOString().split('T')[0];
+      }).reverse();
+
+      const chartData = last5Days.map(date => {
+        const record = attendanceData.find(a => a.date === date);
+        if (record) {
+          const present = Object.values(record.records).filter(s => s === 'present').length;
+          const absent = Object.values(record.records).filter(s => s === 'absent').length;
+          const late = Object.values(record.records).filter(s => s === 'late').length;
+          return { date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), present, absent, late };
+        }
+        return { date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), present: 0, absent: 0, late: 0 };
+      });
+      setAttendanceChartData(chartData);
+    }
+  }, [attendanceData]);
+
+
+  const isLoading = isAuthLoading || isLoadingEvents || isLoadingAttendance;
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
                                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                    .slice(0, 5) || [];
@@ -97,9 +144,9 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
+            <div className="text-2xl font-bold">{studentCount}</div>
             <p className="text-xs text-muted-foreground">
-              +2.1% from last month
+              Across all classes
             </p>
           </CardContent>
         </Card>
@@ -111,9 +158,9 @@ export default function AdminDashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">52</div>
+            <div className="text-2xl font-bold">{teacherCount}</div>
             <p className="text-xs text-muted-foreground">
-              +5 since last hour
+              Total teachers
             </p>
           </CardContent>
         </Card>
@@ -150,19 +197,18 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>School Activity Overview</CardTitle>
-            <CardDescription>A summary of attendance and assignments over the past 6 months.</CardDescription>
+            <CardTitle>Attendance Overview</CardTitle>
+            <CardDescription>A summary of student attendance over the past 5 days.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-              <BarChart accessibilityLayer data={chartData}>
+              <BarChart accessibilityLayer data={attendanceChartData}>
                 <CartesianGrid vertical={false} />
                 <XAxis
-                  dataKey="month"
+                  dataKey="date"
                   tickLine={false}
                   tickMargin={10}
                   axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
                 />
                  <YAxis />
                 <ChartTooltip
@@ -170,8 +216,9 @@ export default function AdminDashboard() {
                   content={<ChartTooltipContent indicator="dot" />}
                 />
                  <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="attendance" fill="var(--color-attendance)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="assignments" fill="var(--color-assignments)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="present" fill="var(--color-present)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="absent" fill="var(--color-absent)" radius={[4, 4, 0, 0]} />
+                 <Bar dataKey="late" fill="var(--color-late)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
