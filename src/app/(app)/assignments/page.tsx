@@ -253,23 +253,24 @@ function StudentView() {
     }, [firestore, user, isAuthLoading]);
     const { data: studentAssignmentsData, isLoading: isLoadingStudentData } = useCollection<StudentAssignment>(studentAssignmentsQuery);
     
-    const [combinedAssignments, setCombinedAssignments] = useState<(Assignment & Partial<StudentAssignment>)[]>([]);
+    type CombinedAssignment = Assignment & Partial<Omit<StudentAssignment, 'id'>> & { studentAssignmentId?: string };
+    const [combinedAssignments, setCombinedAssignments] = useState<CombinedAssignment[]>([]);
 
     useEffect(() => {
-        if (!classAssignments) {
-            setCombinedAssignments([]);
+        if (!classAssignments || !studentAssignmentsData) {
+            // If either is null, we can't combine yet. If classAssignments is available, show it with defaults.
+            setCombinedAssignments(classAssignments || []);
             return;
         }
 
-        const studentDataMap = new Map(studentAssignmentsData?.map(sa => [sa.assignmentId, sa]) || []);
+        const studentDataMap = new Map(studentAssignmentsData.map(sa => [sa.assignmentId, sa]));
 
-        const combined = classAssignments.map(assignment => {
+        const combined: CombinedAssignment[] = classAssignments.map(assignment => {
             const studentData = studentDataMap.get(assignment.id);
             return {
-                ...assignment, // This contains the fileUrl and fileName from the original assignment
-                status: studentData?.status || 'Not Started',
-                priority: studentData?.priority || 'Medium',
-                id: assignment.id, // Ensure original assignment ID is not lost
+                ...assignment, // This is the base assignment with title, fileUrl, etc.
+                status: studentData?.status ?? 'Not Started',
+                priority: studentData?.priority ?? 'Medium',
                 studentAssignmentId: studentData?.id,
             };
         });
