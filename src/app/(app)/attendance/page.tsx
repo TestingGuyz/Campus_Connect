@@ -14,6 +14,8 @@ import { collection, query, where, doc, getDoc, setDoc } from 'firebase/firestor
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 type Student = {
     id: string;
@@ -34,26 +36,21 @@ export default function AttendancePage() {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
   const studentsQuery = useMemoFirebase(() => {
-    if (isAuthLoading || !firestore || !classId || !sectionId) return null;
+    if (!firestore || !classId || !sectionId) return null;
     return query(collection(firestore, `classes/${classId}/sections/${sectionId}/students`));
-  }, [firestore, classId, sectionId, isAuthLoading]);
+  }, [firestore, classId, sectionId]);
 
   const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsQuery);
   
   useEffect(() => {
     const fetchAttendance = async () => {
-        if (!firestore) return;
+        if (!firestore || !classId || !sectionId) return;
         const attendanceDocRef = doc(firestore, 'attendance', today);
         const docSnap = await getDoc(attendanceDocRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // Filter for the current class/section
             const classSectionKey = `${classId}-${sectionId}`;
-            if (data[classSectionKey]) {
-              setAttendance(data[classSectionKey]);
-            } else {
-              setAttendance({});
-            }
+            setAttendance(data[classSectionKey] || {});
         } else {
             setAttendance({});
         }
@@ -69,7 +66,7 @@ export default function AttendancePage() {
   };
 
   const handleSaveAttendance = async () => {
-    if (!firestore) return;
+    if (!firestore || !classId || !sectionId) return;
     setIsSaving(true);
     const attendanceDocRef = doc(firestore, 'attendance', today);
     const classSectionKey = `${classId}-${sectionId}`;
@@ -80,7 +77,12 @@ export default function AttendancePage() {
         }, { merge: true });
         toast({ title: "Success", description: "Attendance has been saved."});
     } catch (error) {
-        console.error("Error saving attendance:", error);
+        const permissionError = new FirestorePermissionError({
+            path: attendanceDocRef.path,
+            operation: 'write',
+            requestResourceData: { [classSectionKey]: attendance }
+        });
+        errorEmitter.emit('permission-error', permissionError);
         toast({ variant: 'destructive', title: "Error", description: "Could not save attendance."});
     } finally {
         setIsSaving(false);
@@ -135,7 +137,7 @@ export default function AttendancePage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="overflow-x-auto">
+          <div className="w-full overflow-x-auto">
             <Table className="min-w-[600px]">
               <TableHeader>
                 <TableRow>

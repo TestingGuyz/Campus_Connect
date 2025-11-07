@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, BookOpen, Users, CalendarCheck, BarChart2, UserCheck, UserX, UserClock } from 'lucide-react';
+import { Activity, BookOpen, Users, CalendarCheck, BarChart2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -20,7 +20,7 @@ import {
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import type { ChartConfig } from '@/components/ui/chart';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, collectionGroup, getDocs } from 'firebase/firestore';
+import { collection, collectionGroup, getDocs, query } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect } from 'react';
@@ -57,10 +57,10 @@ type SchoolEvent = {
 };
 
 type AttendanceRecord = {
-  id: string;
-  date: string;
-  records: Record<string, 'present' | 'absent' | 'late'>;
-}
+  id: string; // date YYYY-MM-DD
+  [classSectionKey: string]: Record<string, 'present' | 'absent' | 'late'>;
+};
+
 
 const getPriorityBadge = (priority: string) => {
     switch (priority) {
@@ -80,12 +80,12 @@ export default function AdminDashboard() {
 
   const eventsQuery = useMemoFirebase(() => {
     if (isAuthLoading || !user || !firestore) return null;
-    return collection(firestore, 'events');
+    return query(collection(firestore, 'events'));
   }, [firestore, user, isAuthLoading]);
 
   const attendanceQuery = useMemoFirebase(() => {
     if (isAuthLoading || !user || !firestore) return null;
-    return collection(firestore, 'attendance');
+    return query(collection(firestore, 'attendance'));
   }, [firestore, user, isAuthLoading]);
 
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
@@ -95,13 +95,19 @@ export default function AdminDashboard() {
     const fetchCounts = async () => {
         if (!firestore) return;
 
-        const teachersSnapshot = await getDocs(collection(firestore, 'teachers'));
-        setTeacherCount(teachersSnapshot.size);
+        try {
+            const teachersSnapshot = await getDocs(collection(firestore, 'teachers'));
+            setTeacherCount(teachersSnapshot.size);
 
-        const studentsSnapshot = await getDocs(collectionGroup(firestore, 'students'));
-        setStudentCount(studentsSnapshot.size);
+            const studentsSnapshot = await getDocs(collectionGroup(firestore, 'students'));
+            setStudentCount(studentsSnapshot.size);
+        } catch (e) {
+            console.error("Error fetching counts: ", e);
+        }
     };
-    fetchCounts();
+    if (firestore) {
+      fetchCounts();
+    }
   }, [firestore]);
 
   useEffect(() => {
@@ -114,14 +120,28 @@ export default function AdminDashboard() {
       }).reverse();
 
       const chartData = last5Days.map(date => {
-        const record = attendanceData.find(a => a.date === date);
-        if (record) {
-          const present = Object.values(record.records).filter(s => s === 'present').length;
-          const absent = Object.values(record.records).filter(s => s === 'absent').length;
-          const late = Object.values(record.records).filter(s => s === 'late').length;
-          return { date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), present, absent, late };
+        const recordForDay = attendanceData.find(a => a.id === date);
+        const dayStats = {
+          date: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          present: 0,
+          absent: 0,
+          late: 0,
+        };
+
+        if (recordForDay) {
+          // Iterate over all class sections for that day (e.g., '10-A', '10-B')
+          Object.keys(recordForDay).forEach(key => {
+            if (key !== 'id') {
+              const classAttendance = recordForDay[key];
+              Object.values(classAttendance).forEach(status => {
+                if (status === 'present') dayStats.present++;
+                else if (status === 'absent') dayStats.absent++;
+                else if (status === 'late') dayStats.late++;
+              });
+            }
+          });
         }
-        return { date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), present: 0, absent: 0, late: 0 };
+        return dayStats;
       });
       setAttendanceChartData(chartData);
     }
@@ -129,9 +149,13 @@ export default function AdminDashboard() {
 
 
   const isLoading = isAuthLoading || isLoadingEvents || isLoadingAttendance;
+  
   const highPriorityEvents = events?.filter(e => e.priority === 'High' && new Date(e.date) >= new Date())
                                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                    .slice(0, 5) || [];
+  
+  const totalAttendance = attendanceChartData[attendanceChartData.length - 1];
+  const attendanceRate = totalAttendance && (totalAttendance.present + totalAttendance.late) > 0 ? (((totalAttendance.present + totalAttendance.late) / (totalAttendance.present + totalAttendance.late + totalAttendance.absent)) * 100).toFixed(1) : 'N/A';
 
   return (
     <div className="flex flex-col gap-6">
@@ -144,7 +168,7 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{studentCount}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : studentCount}</div>
             <p className="text-xs text-muted-foreground">
               Across all classes
             </p>
@@ -158,7 +182,7 @@ export default function AdminDashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{teacherCount}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : teacherCount}</div>
             <p className="text-xs text-muted-foreground">
               Total teachers
             </p>
@@ -181,14 +205,14 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-                Attendance Rate
+                Today's Attendance
             </CardTitle>
             <BarChart2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">94.5%</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : `${attendanceRate}%`}</div>
             <p className="text-xs text-muted-foreground">
-              +0.5% from yesterday
+              Based on latest records
             </p>
           </CardContent>
         </Card>
@@ -216,9 +240,9 @@ export default function AdminDashboard() {
                   content={<ChartTooltipContent indicator="dot" />}
                 />
                  <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="present" fill="var(--color-present)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="absent" fill="var(--color-absent)" radius={[4, 4, 0, 0]} />
-                 <Bar dataKey="late" fill="var(--color-late)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="present" stackId="a" fill="var(--color-present)" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="absent" stackId="a" fill="var(--color-absent)" radius={[0, 0, 0, 0]} />
+                 <Bar dataKey="late" stackId="a" fill="var(--color-late)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -231,7 +255,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
                 {isLoading ? <p>Loading events...</p> : (
-                    <div className="overflow-x-auto">
+                    <div className="w-full overflow-x-auto">
                         <ul className="space-y-3">
                             {highPriorityEvents.map(event => (
                                 <li key={event.id} className="flex items-center justify-between text-sm">
@@ -254,7 +278,7 @@ export default function AdminDashboard() {
                 <CardDescription>A log of recent student and staff actions.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto">
+                <div className="w-full overflow-x-auto">
                     <Table>
                         <TableBody>
                             {recentActivities.map((activity, index) => (

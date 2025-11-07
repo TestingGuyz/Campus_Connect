@@ -158,8 +158,12 @@ export default function CalendarPage() {
 
   const isLoading = isAuthLoading || isLoadingEvents;
   
-  const sortedEvents = events?.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const upcomingEvents = sortedEvents?.filter(e => new Date(e.date) >= new Date()) || [];
+  const eventsForSelectedDay = events?.filter(event => {
+    if (!date) return false;
+    const eventDate = new Date(event.date + 'T00:00:00');
+    return eventDate.toDateString() === date.toDateString();
+  }).sort((a, b) => a.priority.localeCompare(b.priority));
+
 
   return (
     <div className="space-y-6">
@@ -198,12 +202,13 @@ export default function CalendarPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>A list of important dates and events.</CardDescription>
+            <CardTitle>Events for {date ? date.toLocaleDateString() : 'Today'}</CardTitle>
+            <CardDescription>A list of events scheduled for the selected day.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isLoading && <p>Loading events...</p>}
-            {!isLoading && upcomingEvents.map((event) => (
+            {!isLoading && eventsForSelectedDay && eventsForSelectedDay.length > 0 ? (
+                eventsForSelectedDay.map((event) => (
               <div key={event.id} className="flex items-start gap-4">
                 <div className="flex flex-col items-center justify-center bg-muted text-muted-foreground rounded-md h-12 w-12 shrink-0">
                     <span className="text-xs font-bold uppercase">{new Date(event.date + 'T00:00:00').toLocaleString('default', { month: 'short' })}</span>
@@ -217,8 +222,10 @@ export default function CalendarPage() {
                   </div>
                 </div>
               </div>
-            ))}
-            {upcomingEvents.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No upcoming events.</p>}
+            ))
+            ) : (
+                !isLoading && <p className="text-sm text-muted-foreground">No events for this day.</p>
+            )}
           </CardContent>
         </Card>
       </div>
