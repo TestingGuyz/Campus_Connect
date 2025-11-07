@@ -81,30 +81,45 @@ export default function StudentDashboard() {
             const timetable = docSnap.data() as TimetableData;
             const today = new Date();
             const dayOfWeek = today.toLocaleString('en-US', { weekday: 'long' }) as keyof TimetableData;
-            const now = today.getHours() * 60 + today.getMinutes();
+            
+            // This function will re-run every minute to update the 'isCurrent' status
+            const updateSchedule = () => {
+                const now = new Date();
+                const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-            if (timetable[dayOfWeek]) {
-                const scheduleForToday = Object.entries(timetable[dayOfWeek]).map(([period, subject], index) => {
-                    const time = periodTimes[index];
-                    const [hour, minutePart] = time.split(':');
-                    const minutes = parseInt(minutePart.split(' ')[0]);
-                    const isPM = minutePart.includes('PM');
-                    let periodStartMinutes = parseInt(hour) * 60 + minutes;
-                    if (isPM && parseInt(hour) !== 12) periodStartMinutes += 12 * 60;
+                if (timetable[dayOfWeek]) {
+                    const scheduleForToday = Object.entries(timetable[dayOfWeek]).map(([period, subject], index) => {
+                        const time = periodTimes[index];
+                        const [hourStr, minutePart] = time.split(':');
+                        const minutes = parseInt(minutePart.split(' ')[0]);
+                        const isPM = minutePart.includes('PM');
+                        
+                        let hour = parseInt(hourStr);
+                        if (isPM && hour !== 12) hour += 12;
+                        if (!isPM && hour === 12) hour = 0; // Midnight case, not relevant here but good practice
+                        
+                        const periodStartMinutes = hour * 60 + minutes;
+                        const periodEndMinutes = periodStartMinutes + (index === 3 ? 40 : (index === 4 ? 40 : 60)); // Handle Tiffin/Break
 
-                    return {
-                        time: time,
-                        subject: subject,
-                        isCurrent: now >= periodStartMinutes && now < periodStartMinutes + 60
-                    }
-                }).filter(item => item.subject && item.subject.toLowerCase() !== 'break' && item.subject.toLowerCase() !== 'tiffin');
+                        return {
+                            time: time,
+                            subject: subject,
+                            isCurrent: nowMinutes >= periodStartMinutes && nowMinutes < periodEndMinutes
+                        }
+                    }).filter(item => item.subject && item.subject.toLowerCase() !== 'break' && item.subject.toLowerCase() !== 'tiffin');
 
-                setTodaysSchedule(scheduleForToday);
-            }
+                    setTodaysSchedule(scheduleForToday);
+                }
+            };
+            
+            updateSchedule(); // Run immediately
+            const intervalId = setInterval(updateSchedule, 60000); // And then every minute
+
+            return () => clearInterval(intervalId); // Cleanup on unmount
         }
     };
     
-    if(!isAuthLoading) {
+    if(!isAuthLoading && user) {
       fetchTimetable();
     }
 }, [firestore, user, isAuthLoading]);

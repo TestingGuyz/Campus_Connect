@@ -253,30 +253,30 @@ function StudentView() {
     }, [firestore, user, isAuthLoading]);
     const { data: studentAssignmentsData, isLoading: isLoadingStudentData } = useCollection<StudentAssignment>(studentAssignmentsQuery);
     
-    type CombinedAssignment = Assignment & Partial<Omit<StudentAssignment, 'id'>> & { studentAssignmentId?: string };
+    type CombinedAssignment = Assignment & Partial<Omit<StudentAssignment, 'id' | 'assignmentId' | 'studentId'>> & { studentAssignmentId?: string };
     const [combinedAssignments, setCombinedAssignments] = useState<CombinedAssignment[]>([]);
 
     useEffect(() => {
-        if (!classAssignments || !studentAssignmentsData) {
-            // If either is null, we can't combine yet. If classAssignments is available, show it with defaults.
-            setCombinedAssignments(classAssignments || []);
-            return;
+        if (isLoadingAssignments || isLoadingStudentData) return;
+
+        if (classAssignments) {
+            const studentDataMap = new Map(studentAssignmentsData?.map(sa => [sa.assignmentId, sa]));
+
+            const combined: CombinedAssignment[] = classAssignments.map(assignment => {
+                const studentData = studentDataMap.get(assignment.id);
+                return {
+                    ...assignment, // This is the base assignment with title, fileUrl, etc.
+                    status: studentData?.status ?? 'Not Started',
+                    priority: studentData?.priority ?? 'Medium',
+                    studentAssignmentId: studentData?.id,
+                };
+            });
+            setCombinedAssignments(combined);
+        } else {
+            setCombinedAssignments([]);
         }
 
-        const studentDataMap = new Map(studentAssignmentsData.map(sa => [sa.assignmentId, sa]));
-
-        const combined: CombinedAssignment[] = classAssignments.map(assignment => {
-            const studentData = studentDataMap.get(assignment.id);
-            return {
-                ...assignment, // This is the base assignment with title, fileUrl, etc.
-                status: studentData?.status ?? 'Not Started',
-                priority: studentData?.priority ?? 'Medium',
-                studentAssignmentId: studentData?.id,
-            };
-        });
-        setCombinedAssignments(combined);
-
-    }, [classAssignments, studentAssignmentsData]);
+    }, [classAssignments, studentAssignmentsData, isLoadingAssignments, isLoadingStudentData]);
 
 
     const handleStudentAssignmentChange = (assignmentId: string, studentAssignmentId: string | undefined, field: 'status' | 'priority', value: string) => {
