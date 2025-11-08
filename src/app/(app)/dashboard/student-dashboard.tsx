@@ -3,12 +3,11 @@ import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookMarked, CalendarCheck, CalendarDays, TrendingUp } from 'lucide-react';
+import { ArrowRight, BookMarked, CalendarCheck, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { collection, query, where } from 'firebase/firestore';
 
 type Assignment = {
     id: string;
@@ -27,17 +26,6 @@ type SchoolEvent = {
   priority: 'High' | 'Medium' | 'Low';
 };
 
-type TimetableDay = {
-  period1: string; period2: string; period3: string; period4: string;
-  period5: string; period6: string; period7: string; period8: string;
-};
-type TimetableData = {
-  Monday: TimetableDay; Tuesday: TimetableDay; Wednesday: TimetableDay;
-  Thursday: TimetableDay; Friday: TimetableDay;
-};
-const periodTimes = ["9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "12:40 PM", "1:20 PM", "2:00 PM", "3:00 PM"];
-
-
 const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'High': return 'destructive';
@@ -51,78 +39,22 @@ const getPriorityBadge = (priority: string) => {
 export default function StudentDashboard() {
   const { user, isAuthLoading } = useAuth();
   const firestore = useFirestore();
-  const [todaysSchedule, setTodaysSchedule] = useState<{ time: string, subject: string, isCurrent: boolean }[]>([]);
-
+  
   const assignmentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.className || !user?.sectionName) return null;
-    return query(
-        collection(firestore, 'assignments'),
-        where('classId', '==', user.className),
-        where('sectionId', '==', user.sectionName)
-    );
-  }, [firestore, user]);
-
+        if (isAuthLoading || !user?.className || !user?.sectionName || !firestore) return null;
+        return query(
+            collection(firestore, 'assignments'), 
+            where('classId', '==', user.className),
+            where('sectionId', '==', user.sectionName)
+        );
+    }, [firestore, user, isAuthLoading]);
   const { data: assignments, isLoading: isLoadingAssignments } = useCollection<Assignment>(assignmentsQuery);
   
   const eventsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'events'));
-  }, [firestore]);
+    if (isAuthLoading || !user || !firestore) return null;
+    return collection(firestore, 'events');
+  }, [firestore, user, isAuthLoading]);
   const { data: events, isLoading: isLoadingEvents } = useCollection<SchoolEvent>(eventsQuery);
-
-  useEffect(() => {
-    const fetchTimetable = async () => {
-        if (!firestore || !user?.className || !user?.sectionName) return;
-
-        const timetableDocRef = doc(firestore, `classes/${user.className}/sections/${user.sectionName}/timetable/schedule`);
-        const docSnap = await getDoc(timetableDocRef);
-
-        if (docSnap.exists()) {
-            const timetable = docSnap.data() as TimetableData;
-            const today = new Date();
-            const dayOfWeek = today.toLocaleString('en-US', { weekday: 'long' }) as keyof TimetableData;
-            
-            // This function will re-run every minute to update the 'isCurrent' status
-            const updateSchedule = () => {
-                const now = new Date();
-                const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-                if (timetable[dayOfWeek]) {
-                    const scheduleForToday = Object.entries(timetable[dayOfWeek]).map(([period, subject], index) => {
-                        const time = periodTimes[index];
-                        const [hourStr, minutePart] = time.split(':');
-                        const minutes = parseInt(minutePart.split(' ')[0]);
-                        const isPM = minutePart.includes('PM');
-                        
-                        let hour = parseInt(hourStr);
-                        if (isPM && hour !== 12) hour += 12;
-                        if (!isPM && hour === 12) hour = 0; // Midnight case, not relevant here but good practice
-                        
-                        const periodStartMinutes = hour * 60 + minutes;
-                        const periodEndMinutes = periodStartMinutes + (index === 3 ? 40 : (index === 4 ? 40 : 60)); // Handle Tiffin/Break
-
-                        return {
-                            time: time,
-                            subject: subject,
-                            isCurrent: nowMinutes >= periodStartMinutes && nowMinutes < periodEndMinutes
-                        }
-                    }).filter(item => item.subject && item.subject.toLowerCase() !== 'break' && item.subject.toLowerCase() !== 'tiffin');
-
-                    setTodaysSchedule(scheduleForToday);
-                }
-            };
-            
-            updateSchedule(); // Run immediately
-            const intervalId = setInterval(updateSchedule, 60000); // And then every minute
-
-            return () => clearInterval(intervalId); // Cleanup on unmount
-        }
-    };
-    
-    if(!isAuthLoading && user) {
-      fetchTimetable();
-    }
-}, [firestore, user, isAuthLoading]);
 
   const isLoading = isAuthLoading || isLoadingAssignments || isLoadingEvents;
   
@@ -155,7 +87,7 @@ export default function StudentDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-3">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                     <TrendingUp className="h-5 w-5 text-primary" />
@@ -185,34 +117,6 @@ export default function StudentDashboard() {
                     <Progress value={88} aria-label="Overall grade progress" />
                 </div>
             </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-                <CalendarDays className="h-5 w-5 text-primary" />
-                Today's Schedule
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-                {todaysSchedule.length > 0 ? todaysSchedule.map((c, i) => (
-                    <div key={i} className="flex items-center">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4 shrink-0">
-                            <span className="font-bold text-sm">{c.time.split(' ')[0]}</span>
-                        </div>
-                        <div className="flex-grow">
-                            <p className="font-semibold">{c.subject}</p>
-                        </div>
-                        <Badge variant={c.isCurrent ? "default" : "secondary"}>
-                            {c.isCurrent ? 'In Progress' : 'Upcoming'}
-                        </Badge>
-                    </div>
-                )) : <p className="text-sm text-muted-foreground text-center py-4">No classes scheduled for today.</p>}
-            </div>
-            <Button variant="outline" className="mt-6 w-full" asChild>
-                <Link href="/timetable">View Full Timetable <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-          </CardContent>
         </Card>
       </div>
 
