@@ -129,7 +129,6 @@ export default function AdminDashboard() {
         };
 
         if (recordForDay) {
-          // Iterate over all class sections for that day (e.g., '10-A', '10-B')
           Object.keys(recordForDay).forEach(key => {
             if (key !== 'id') {
               const classAttendance = recordForDay[key];
@@ -154,8 +153,10 @@ export default function AdminDashboard() {
                                    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                    .slice(0, 5) || [];
   
-  const totalAttendance = attendanceChartData[attendanceChartData.length - 1];
-  const attendanceRate = totalAttendance && (totalAttendance.present + totalAttendance.late) > 0 ? (((totalAttendance.present + totalAttendance.late) / (totalAttendance.present + totalAttendance.late + totalAttendance.absent)) * 100).toFixed(1) : 'N/A';
+  const latestAttendanceData = attendanceChartData.length > 0 ? attendanceChartData[attendanceChartData.length - 1] : null;
+  const attendanceRate = latestAttendanceData && (latestAttendanceData.present + latestAttendanceData.late + latestAttendanceData.absent > 0) 
+    ? (((latestAttendanceData.present + latestAttendanceData.late) / (latestAttendanceData.present + latestAttendanceData.late + latestAttendanceData.absent)) * 100).toFixed(1) 
+    : 'N/A';
 
   return (
     <div className="flex flex-col gap-6">
