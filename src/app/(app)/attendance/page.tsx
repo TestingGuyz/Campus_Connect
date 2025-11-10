@@ -1,3 +1,4 @@
+
 'use client';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +25,14 @@ type Student = {
 
 type AttendanceStatus = 'present' | 'absent' | 'late';
 
+const dummyStudents: Student[] = [
+    { id: 'student1', name: 'Alex Johnson' },
+    { id: 'student2', name: 'Maria Garcia' },
+    { id: 'student4', name: 'David Wilson' },
+    { id: 'student5', name: 'Laura Martinez' },
+];
+
+
 export default function AttendancePage() {
   const { user, isAuthLoading } = useAuth();
   const firestore = useFirestore();
@@ -35,13 +44,17 @@ export default function AttendancePage() {
   const [isSaving, setIsSaving] = useState(false);
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
+  // Using dummy data for now, but keeping the query logic for when it's needed
   const studentsQuery = useMemoFirebase(() => {
     if (!firestore || !classId || !sectionId) return null;
     return query(collection(firestore, `classes/${classId}/sections/${sectionId}/students`));
   }, [firestore, classId, sectionId]);
-
-  const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsQuery);
+  const { data: studentsFromDB, isLoading: isLoadingStudents } = useCollection<Student>(studentsQuery);
   
+  // Use dummy students if the class is 10-A, otherwise use students from DB
+  const students = (classId === '10' && sectionId === 'A') ? dummyStudents : studentsFromDB;
+
+
   useEffect(() => {
     const fetchAttendance = async () => {
         if (!firestore || !classId || !sectionId) return;
@@ -189,7 +202,7 @@ export default function AttendancePage() {
                     </TableRow>
                   );
                 })}
-                 {!isLoading && students?.length === 0 && (
+                 {!isLoading && (!students || students.length === 0) && (
                     <TableRow>
                         <TableCell colSpan={2} className="text-center h-24 text-muted-foreground">No students found for this class/section.</TableCell>
                     </TableRow>
